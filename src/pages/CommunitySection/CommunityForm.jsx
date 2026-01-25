@@ -1,0 +1,150 @@
+import React from 'react'
+import { useForm } from 'react-hook-form'
+import { zodResolver } from "@hookform/resolvers/zod"
+import * as z from "zod"
+import { motion } from "framer-motion"
+import { Users, Info, PlusCircle, Loader2 } from "lucide-react"
+
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from '../../components/ui/form'
+import { Button } from '../../components/ui/button'
+import { Input } from "../../components/ui/input"
+import { Textarea } from '../../components/ui/textarea'
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "../../components/ui/card"
+import { Spinner } from '../../components/ui/spinner'
+import { useSupabase} from '../../supabase/client'
+import { useUser } from '@clerk/clerk-react'
+
+const formSchema = z.object({
+  communityName: z.string().min(3, "Community name must be at least 3 characters"),
+  about: z.string().min(4, "About must be at least 4 characters").max(50, "About must be within 50 characters"),
+  size: z.number().min(1, "Must be at least 1 member"),
+})
+
+const CommunityForm = () => {
+  const {user} = useUser()
+  const supabase = useSupabase();
+
+  const form = useForm({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      communityName: "",
+      about: "",
+      size: 1,
+    }
+  })
+
+  const onSubmit = async (values) => {
+    const {error} = await supabase.from("communities").insert({
+        name:values.communityName,
+        about: values.about,
+        size: values.size,
+        owner_id: user.id
+    })
+
+    if(error) {
+       console.log("Supabse Error: "+error.message);
+       return;
+    }
+    alert("Community created!")
+    console.log("Form Values:", values)
+  }
+
+  return (
+    <div className="flex items-center justify-center min-h-[80vh] p-4 w-full">
+      <motion.div 
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ duration: 0.4, ease: "easeOut" }}
+        className="w-full max-w-lg"
+      >
+        <Card className="border-border/50 shadow-2xl bg-card/50 backdrop-blur-md">
+          <CardHeader className="space-y-1">
+            <div className="flex items-center gap-2 mb-2">
+              <div className="p-2 bg-primary/10 rounded-lg">
+                <PlusCircle className="w-5 h-5 text-primary" />
+              </div>
+              <CardTitle className="text-2xl font-bold">New Community</CardTitle>
+            </div>
+            <CardDescription>
+              Set up your community workspace in seconds.
+            </CardDescription>
+          </CardHeader>
+          
+          <CardContent>
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                <FormField
+                  control={form.control}
+                  name="communityName"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-sm font-medium">Community Name</FormLabel>
+                      <FormControl>
+                        <div className="relative">
+                          <Users className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                          <Input placeholder="Tech Squad" className="pl-9" {...field} />
+                        </div>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="about"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-sm font-medium">Description</FormLabel>
+                      <FormControl>
+                        <div className="relative">
+                          <Info className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                          <Textarea placeholder="What's this group about?" className="pl-9" {...field} />
+                        </div>
+                      </FormControl>
+                      <FormDescription className="text-xs">Keep it short and catchy.</FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="size"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-sm font-medium">Initial Member Limit</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          {...field}
+                          onChange={(e) => field.onChange(Number(e.target.value))}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <Button 
+                  type="submit" 
+                  className="w-full font-semibold shadow-lg hover:shadow-primary/20 transition-all active:scale-95"
+                  disabled={form.formState.isSubmitting}
+                >
+                  {form.formState.isSubmitting ? (
+                    <>
+                      <Spinner />
+                      Creating...
+                    </>
+                  ) : "Create Community"}
+                </Button>
+              </form>
+            </Form>
+          </CardContent>
+        </Card>
+      </motion.div>
+    </div>
+  )
+}
+
+export default CommunityForm
