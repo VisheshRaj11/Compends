@@ -1,12 +1,15 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Button } from '../../components/ui/button';
-import { CirclePlus, MoreVertical, MessageSquare } from 'lucide-react';
+import { CirclePlus, MoreVertical, MessageSquare, Plus } from 'lucide-react';
 import { useParams } from 'react-router-dom';
 import AddUser from './AddUser';
 import { useSupabase } from '../../supabase/client';
 import { Avatar, AvatarFallback, AvatarImage } from "../../components/ui/avatar";
 import { ScrollArea } from "../../components/ui/scroll-area";
 import { Badge } from "../../components/ui/badge";
+import { useUser } from '@clerk/clerk-react';
+import Messages from './Messages';
+import { uploadFile } from '../../utils/UploadFile';
 
 const Chat = () => {
   const { id: communityId } = useParams();
@@ -15,10 +18,82 @@ const Chat = () => {
   const [communtiyDetails, setCommunityDetails] = useState({});
   const [activeChat, setActiveChat] = useState(null); // Track selected user
   const supabase = useSupabase();
+  const [messageText, setMessageText] = useState('');
+  const fileRef = useRef(null);
+  const [supabaseUserId, setSupabaseUserId] = useState(null);
+  const {user} = useUser();
 
   const handleOverlay = (e) => {
     if (e.target === e.currentTarget) setAddMemberOpen(false);
   };
+
+
+ const sendMessage = async () => {
+  const hasText = messageText && messageText.trim().length > 0;
+  const hasFile = fileRef.current?.files?.length > 0;
+
+  if (!hasText && !hasFile) return;
+    if (!supabaseUserId) {
+      console.log(supabaseUserId);
+      alert("User not synced yet. Please wait a second and try again.");
+    return;
+  }
+
+
+  try {
+    const file = fileRef.current?.files?.[0];
+    let fileData = null;
+
+   if (file) {
+      try {
+        fileData = await uploadFile(file, communityId, supabase);
+      } catch (error) {
+        alert("File upload failed. Try again.", error.message);
+        return;
+      }
+    }
+
+    const messageType =
+      file && hasText ? "mixed" : file ? "file" : "text";
+
+    const { error } = await supabase.from("messages").insert({
+      community_id: communityId,
+      user_id: supabaseUserId,
+      type: messageType,
+      content: hasText ? messageText.trim() : null,
+      file_url: fileData?.url || null,
+      file_name: fileData?.name || null,
+      file_size: fileData?.size || null,
+      mime_type: fileData?.type || null
+    });
+
+    if (error) throw error;
+    alert('Message send successfully');
+    // Cleanup
+    setMessageText("");
+    if (fileRef.current) fileRef.current.value = "";
+  } catch (err) {
+    console.error("Send failed:", err.message || err);
+  }
+};
+
+
+// Fetch userId:
+  useEffect(() => {
+     const fetchSupabaseUser = async () => {
+      if (!user?.id) return;
+
+      const { data, error } = await supabase
+        .from("users")
+        .select("id")
+        .eq("clerk_id", user.id)
+        .single();
+
+      if (!error) setSupabaseUserId(data[0].id);
+    };
+
+    fetchSupabaseUser();
+  },[user, supabase])
 
   useEffect(() => {
     const fetchCommunityDetail = async() => {
@@ -31,6 +106,10 @@ const Chat = () => {
     }
     if(communityId) fetchCommunityDetail();
   },[communityId, supabase])
+
+  useEffect(() => {
+
+  },[])
 
   useEffect(() => {
     const fetchCommunityMembers = async () => {
@@ -157,28 +236,42 @@ const Chat = () => {
         </header>
 
         {/* Message Feed */}
-        <main className="flex-1 overflow-y-auto p-6 space-y-6 bg-accent/30">
-           <div className="flex justify-start">
-             <div className="max-w-[70%] bg-card p-4 rounded-2xl rounded-tl-none shadow-sm border text-sm leading-relaxed">
-               How is the project going?
-             </div>
-           </div>
-           <div className="flex justify-end">
-             <div className="max-w-[70%] bg-primary text-primary-foreground p-4 rounded-2xl rounded-tr-none shadow-md text-sm leading-relaxed">
-               Almost finished! Just fixing the CSS responsiveness now.
-             </div>
-           </div>
+        <main className="flex-1 p-6 space-y-6 bg-accent/30">
+          <Messages communityId={communityId} currentUserId={user.id}/>
         </main>
 
         {/* Input Area */}
         <footer className="p-4 bg-background">
-          <div className="max-w-4xl mx-auto flex items-center gap-3 bg-accent/50 p-2 rounded-2xl border focus-within:ring-2 ring-primary/20 transition-all">
+          <div className="max-w-4xl mx-auto flex items-center gap-2 bg-accent/50 p-2 rounded-2xl border focus-within:ring-2 ring-primary/20 transition-all">
+            
+            {/* The Hidden File Input */}
+            <label className="cursor-pointer p-2 hover:bg-accent rounded-xl transition-colors group">
+              <Plus className="w-5 h-5 text-muted-foreground group-hover:text-primary" />
+              <input 
+                type="file" 
+                className="hidden" 
+                ref={fileRef}
+              />
+            </label>
+
             <input 
               type="text" 
+              value={messageText}
+              onChange={(e) => setMessageText(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  sendMessage();
+                }
+              }}
               placeholder="Type a message..." 
-              className="flex-1 bg-transparent border-none focus:outline-none px-4 text-sm"
+              className="flex-1 bg-transparent border-none focus:outline-none px-2 text-sm"
             />
-            <Button className="rounded-xl px-6 shadow-lg shadow-primary/20">
+
+            <Button 
+              onClick={sendMessage}
+              className="rounded-xl px-6 shadow-lg shadow-primary/20"
+            >
               Send
             </Button>
           </div>
