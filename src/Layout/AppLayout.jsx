@@ -1,27 +1,43 @@
 import { useUser } from '@clerk/clerk-react';
-import { Navigate, Outlet, useLocation } from 'react-router-dom';
+import { Navigate, NavLink, Outlet, useLocation } from 'react-router-dom';
 import LandingPage from '../pages/LandingPage/LandingPage';
 import Sidebar from '../components/CommunityPage/Sidebar';
 import ModernBackground from '../components/LandingPage/ModernBackground';
-import { ChartArea, Flame, FolderOpenDot, Image, MessageCircle, PenBox, Video } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect } from 'react';
 import { useEditUserContext } from '../context/EditContext';
+import { ChartArea, Flame, FolderOpenDot, Image, MessageCircle, PenBox, Video } from 'lucide-react';
+import { useDispatch, useSelector } from 'react-redux';
+import { setCommunity } from '@/store/CommunitySlice';
+
 
 const navs = [
-  { icon: <MessageCircle size={20}/>, name: "Chat" },
-  { icon: <Video size={20}/>, name: "Meet" },
-  { icon: <Flame size={20}/>, name: "Profiles" },
-  { icon: <FolderOpenDot size={20}/>, name: "Projects" },
-  { icon: <ChartArea size={20}/>, name: "Ranking" },
-  { icon: <PenBox size={20}/>, name: "Blog" },
-  { icon: <Image size={20}/>, name: "Gallery" }
+{ icon: <MessageCircle size={20} />, name: "Chat", route: "chat" },
+{ icon: <Video size={20} />, name: "Meet", route: "calling" },
+{ icon: <FolderOpenDot size={20} />, name: "Projects", route: "projects" },
+{ icon: <ChartArea size={20} />, name: "Ranking", route: "ranks" },
+{ icon: <PenBox size={20} />, name: "Blog", route: "blogs" },
+{ icon: <Image size={20} />, name: "Gallery", route: "gallery" }
 ];
 
 const AppLayout = () => {
+  const dispatch = useDispatch();
   const { isSignedIn, isLoaded } = useUser();
   const location = useLocation();
-  const [active, setActive] = useState(0);
+  // Inside Sidebar.js mapping
   const {isEditUser} = useEditUserContext();
+  const currentCommunityId = useSelector((state) => state.currentCommunity.id);
+
+  // let idFromUrl = null; 
+  // const activeId = currentCommunityId || idFromUrl;
+
+  useEffect(() => {
+    const pathSegments = location.pathname.split('/');
+    const idFromUrl = pathSegments[pathSegments.length - 1];
+    const staticRoutes = ['community', 'chat', 'calling', 'projects', 'ranks', 'blogs', 'gallery', 'create-community'];
+    if (idFromUrl && !staticRoutes.includes(idFromUrl)) {
+    dispatch(setCommunity(idFromUrl));
+  }
+  }, [location.pathname, dispatch])
 
   if (!isLoaded) return (
     <div className="h-screen w-full flex items-center justify-center bg-slate-50">
@@ -65,19 +81,26 @@ const AppLayout = () => {
                </h1>
                
                <nav className='flex items-center gap-2 overflow-x-auto no-scrollbar'>
-                 {navs.map((nav, index) => (
-                   <button
-                     key={index}
-                     onClick={() => setActive(index)}
-                     className={`flex items-center gap-2 px-3 py-1.5 rounded-full transition-all duration-200 text-sm font-medium
-                       ${active === index 
-                         ? 'bg-black text-white shadow-sm ring-1 ring-indigo-100' 
-                         : 'text-slate-500 hover:bg-slate-100 hover:text-slate-900'}`}
-                   >
-                     {nav.icon}
-                     <span className="hidden lg:inline">{nav.name}</span>
-                   </button>
-                 ))}
+                 {navs.map((nav, index) => {
+                  const pathSegments = location.pathname.split('/');
+                  const idFromUrl = pathSegments[pathSegments.length - 1]; 
+                  const activeId = currentCommunityId || idFromUrl;
+                  return (
+                    <NavLink
+                    key={index}
+                    to={currentCommunityId ? `/community/${nav.route}/${activeId}` : "#"}
+                    className={({ isActive }) => `
+                      flex items-center gap-2 px-3 py-1.5 rounded-full transition-all duration-200 text-sm font-medium
+                      ${isActive 
+                        ? 'bg-black text-white shadow-sm' 
+                        : 'text-slate-500 hover:bg-slate-100 hover:text-slate-900'}
+                    `}
+                  >
+                    {nav.icon}
+                    <span className="hidden lg:inline">{nav.name}</span>
+                  </NavLink>
+                  )
+                 })}
                </nav>
             </header>
 

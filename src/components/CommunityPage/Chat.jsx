@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Button } from '../../components/ui/button';
 import { CirclePlus, MoreVertical, MessageSquare, Plus } from 'lucide-react';
-import { useParams } from 'react-router-dom';
+import { useLocation, useParams } from 'react-router-dom';
 import AddUser from './AddUser';
 import { useSupabase } from '../../supabase/client';
 import { Avatar, AvatarFallback, AvatarImage } from "../../components/ui/avatar";
@@ -13,6 +13,7 @@ import { uploadFile } from '../../utils/UploadFile';
 
 const Chat = () => {
   const { id: communityId } = useParams();
+  const location = useLocation();
   const [addMemberOpen, setAddMemberOpen] = useState(false);
   const [communityMembers, setCommunityMembers] = useState([]);
   const [communtiyDetails, setCommunityDetails] = useState({});
@@ -27,6 +28,10 @@ const Chat = () => {
     if (e.target === e.currentTarget) setAddMemberOpen(false);
   };
 
+
+  useEffect(() => {
+
+  },[])
 
  const sendMessage = async () => {
   const hasText = messageText && messageText.trim().length > 0;
@@ -142,7 +147,7 @@ const Chat = () => {
       {/* LEFT PART: Sidebar */}
       <div className="hidden md:flex md:w-80 lg:w-96 flex-col border-r bg-card">
         <div className="p-4 h-20 border-b flex items-center justify-between bg-card/50 backdrop-blur-md">
-          <h1 className="text-xl font-bold tracking-tight">Messages</h1>
+          <h1 className="text-xl font-bold tracking-tight">Members</h1>
           <Button 
             variant="ghost"
             size="sm"
@@ -217,7 +222,7 @@ const Chat = () => {
       <div className="flex flex-col flex-1 h-full bg-background">
         {/* Chat Header */}
         <header className="h-20 border-b flex items-center justify-between px-6 bg-background/50 backdrop-blur-md">
-          {activeChat ? (
+          {communtiyDetails?.name ? (
             <div className="flex items-center gap-3">
               <Avatar className="h-10 w-10 border">
                 <AvatarFallback>{communtiyDetails.name?.charAt(0)}</AvatarFallback>

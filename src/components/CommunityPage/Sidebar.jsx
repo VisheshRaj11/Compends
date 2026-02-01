@@ -2,11 +2,14 @@ import { UserButton, useUser } from '@clerk/clerk-react'
 import { shadesOfPurple } from '@clerk/themes';
 import React, { useEffect, useState } from 'react'
 import { Button } from '../ui/button';
-import { PlusCircle, Users, EllipsisVertical, Hash, PencilIcon } from 'lucide-react';
+import { PlusCircle, Users, EllipsisVertical, PencilIcon} from 'lucide-react';
 import { useNavigate, NavLink, useLocation } from 'react-router-dom';
 import { useSupabase} from '../../supabase/client'
 import EditUserForm from './EditUserForm';
 import { useEditUserContext } from '../../context/EditContext';
+import { useDispatch } from 'react-redux';
+import { clearCommunity, setCommunity } from '@/store/CommunitySlice';
+
 
 const Sidebar = () => {
   const { user } = useUser();
@@ -14,7 +17,11 @@ const Sidebar = () => {
   const location = useLocation();
   const [communities, setCommunities] = useState([]);
   const {isEditUser, openEdit, closeEdit} = useEditUserContext();
+  const [currentCommunityId, setCurrentCommunityId] = useState(null);
   const supabase = useSupabase();
+  const dispatch = useDispatch();
+  // const isThisCommunityActive = location.pathname.includes(community.id);
+  
   useEffect(() => {
     const fetchCommunities = async () => {
       const { error, data } = await supabase.from("communities").select('*');
@@ -104,36 +111,42 @@ const Sidebar = () => {
         </div>
 
         <div className="space-y-1">
-          {communities.map((community) => (
-            <NavLink
-              key={community.id}
-              to={`/community/${community.id}`}
-              className={({ isActive }) => `
-                group flex items-center justify-between p-2 rounded-lg transition-all duration-200
-                ${isActive 
-                  ? 'bg-indigo-50 text-indigo-700 shadow-sm ring-1 ring-indigo-100' 
-                  : 'text-slate-600 hover:bg-white hover:shadow-sm hover:text-slate-900'}
-              `}
-            >
-              <div className="flex items-center gap-3 min-w-0">
-                <div className={`
-                  p-2 rounded-md transition-colors
-                  ${location.pathname === `/community/${community.id}` 
-                    ? 'bg-indigo-100 text-indigo-600' 
-                    : 'bg-slate-100 text-slate-400 group-hover:bg-indigo-50 '}
-                `}>
-                  <Users size={16} />
+          {communities.map((community) => {
+            // Check if the community ID exists anywhere in the current URL path
+            const isThisCommunityActive = location.pathname.includes(community.id);
+
+            return (
+              <NavLink
+                key={community.id}
+                onClick={() => { dispatch(setCommunity(community.id)); }}
+                to={`/community/chat/${community.id}`}
+                className={`
+                  group flex items-center justify-between p-2 rounded-lg transition-all duration-200
+                  ${isThisCommunityActive 
+                    ? 'bg-indigo-50 text-indigo-700 shadow-sm ring-1 ring-indigo-100' 
+                    : 'text-slate-600 hover:bg-white hover:shadow-sm hover:text-slate-900'}
+                `}
+              >
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className={`
+                    p-2 rounded-md transition-colors
+                    ${isThisCommunityActive 
+                      ? 'bg-indigo-100 text-indigo-600' 
+                      : 'bg-slate-100 text-slate-400 group-hover:bg-indigo-50'}
+                  `}>
+                    <Users size={16} />
+                  </div>
+                  <span className="text-sm font-medium truncate">
+                    {community.name}
+                  </span>
                 </div>
-                <span className="text-sm font-medium truncate">
-                  {community.name}
-                </span>
-              </div>
-              
-              <button className="opacity-0 group-hover:opacity-100 p-1 hover:bg-slate-100 rounded text-slate-400 transition-opacity">
-                <EllipsisVertical size={14} />
-              </button>
-            </NavLink>
-          ))}
+                
+                <button className="opacity-0 group-hover:opacity-100 p-1 hover:bg-slate-100 rounded text-slate-400 transition-opacity">
+                  <EllipsisVertical size={14} />
+                </button>
+              </NavLink>
+            );
+          })}
 
           {communities.length === 0 && (
             <div className="text-center py-8">
@@ -141,6 +154,7 @@ const Sidebar = () => {
             </div>
           )}
         </div>
+
       </div>
     </div>
   )

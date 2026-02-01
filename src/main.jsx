@@ -4,6 +4,8 @@ import './index.css'
 import App from './App.jsx'
  import { ClerkProvider } from '@clerk/clerk-react'
 import { EditUserProvider } from './context/EditContext'
+import { Provider } from 'react-redux'
+import { store } from './store/store'
 
 const PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY
 
@@ -15,11 +17,11 @@ console.log("React mounted")
 
 
 createRoot(document.getElementById('root')).render(
-  <StrictMode>
-    <ClerkProvider publishableKey={PUBLISHABLE_KEY}>
-      <EditUserProvider>
-        <App />
-      </EditUserProvider>
-    </ClerkProvider>
-  </StrictMode>,
+    <Provider store={store}>
+      <ClerkProvider publishableKey={PUBLISHABLE_KEY}>
+        <EditUserProvider>
+          <App />
+        </EditUserProvider>
+      </ClerkProvider>
+    </Provider>
 )
