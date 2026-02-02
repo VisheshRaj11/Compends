@@ -28,11 +28,6 @@ const Chat = () => {
     if (e.target === e.currentTarget) setAddMemberOpen(false);
   };
 
-
-  useEffect(() => {
-
-  },[])
-
  const sendMessage = async () => {
   const hasText = messageText && messageText.trim().length > 0;
   const hasFile = fileRef.current?.files?.length > 0;
