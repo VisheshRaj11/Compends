@@ -1,6 +1,6 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Button } from '../../../components/ui/button';
-import { CirclePlus, MoreVertical, MessageSquare, Plus, Video, Phone, Users, Shield } from 'lucide-react';
+import { Video, Users, Shield, PhoneOff } from 'lucide-react';
 import { useParams } from 'react-router-dom';
 import { useSupabase } from '@/supabase/client';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -8,6 +8,9 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { useUser } from '@clerk/clerk-react';
 import { Checkbox } from '@/components/ui/checkbox';
+import { joinLiveKit } from '@/utils/JoinLivekit';
+import { Track } from 'livekit-client';
+import VideoTile from './VideoTile';
 
 const Chat = () => {
   const { id: communityId } = useParams();
@@ -17,17 +20,117 @@ const Chat = () => {
   const supabase = useSupabase();
   const { user } = useUser();
 
+  const [incomingCallId, setIncomingCallId] = useState(null);
+  const [activeRoom, setActiveRoom] = useState(null);
+  const [remoteTracks, setRemoteTracks] = useState([]);
+
   // Helper to toggle selection
   const toggleMemberSelection = (memberId) => {
     setSelectedMembers((prev) =>
       prev.includes(memberId)
-        ? prev.filter((id) => id !== memberId)
-        : [...prev, memberId]
-    );
-    console.log(selectedMembers);
+    ? prev.filter((id) => id !== memberId)
+    : [...prev, memberId]
+  );
+  console.log(selectedMembers);
+};
+
+const isCallEnabled = selectedMembers.length >= 2;
+
+useEffect(() => {
+  if(!user) return ;
+  
+  const channel = supabase.channel(`incoming-calls-${user.id}`);
+
+  channel.on(
+    "postgres_changes",
+    {
+      event: "INSERT",
+      schema:'public',
+      table: 'call_invites',
+      filter: `user_id=eq.${user.id}`
+    },
+    (payload) => {
+      console.log("Incoming Call", payload.new.call_id);
+      setIncomingCallId(payload.new.call_id);
+    }
+  )
+  channel.subscribe();
+  return () => supabase.removeChannel(channel);
+},[user, supabase]);
+
+// 2. Setup LiveKit Listeners
+  const handleRoomEvents = (room) => {
+    room.on('trackSubscribed', (track) => {
+      setRemoteTracks((prev) => [...prev, track]);
+    });
+    room.on('trackUnsubscribed', (track) => {
+      setRemoteTracks((prev) => prev.filter((t) => t !== track));
+      track.detach();
+    });
+    setActiveRoom(room);
   };
 
-  const isCallEnabled = selectedMembers.length >= 2;
+  const startVideoCall = async() => {
+      try {
+        if(selectedMembers.length < 1) return;
+
+        const  {data, error} = await supabase.functions.invoke("start-call",{
+          body: {
+            community_id: communityId,
+            invitees: selectedMembers,
+          }
+        })
+
+        if (error) throw error;
+
+        const callId = data.call_id;
+        console.log("Call Created: ", callId);
+
+        const tokenRes = await supabase.functions.invoke('generate-token',{
+          body:{call_id:callId},
+        })
+
+        if(tokenRes.error) throw tokenRes.error;
+
+        const room = await joinLiveKit(tokenRes.data.token);
+        handleRoomEvents(room);
+
+      } catch (error) {
+         console.error( error.message);
+         alert("failed to start call");
+      }
+  }
+
+  const acceptCall = async(callId) => {
+    try {
+      const {data, error} = await supabase.functions.invoke("generate-token",{
+        body:{call_id:callId},
+      })
+
+      if (error) throw error; 
+
+      const room = await joinLiveKit(data.token);
+      handleRoomEvents(room);
+
+      await supabase
+        .from("call_invites")
+        .update({ status: "accepted" })
+        .eq("call_id", callId)
+        .eq("user_id", user.id);
+
+    } catch (error) {
+       alert("Failed to join call");
+       console.log(error.message);
+    }
+  }
+
+  const endCall = async() => {
+    if(activeRoom) {
+      await activeRoom.disconnect();
+      setActiveRoom(null);
+      setRemoteTracks([]);
+    }
+  }
 
   useEffect(() => {
     const fetchCommunityMembers = async () => {
@@ -109,50 +212,71 @@ const Chat = () => {
 
       {/* RIGHT PART: Main Area */}
       <div className="flex flex-col flex-1 h-full items-center justify-center p-6 lg:p-12 overflow-x-scroll">
-        <div className="w-full max-w-2xl bg-white rounded-3xl border shadow-xl shadow-slate-200/50 overflow-hidden flex flex-col items-center p-12 text-center space-y-8">
-          
-          <div className="space-y-4">
-             <div className="inline-flex items-center justify-center p-3 bg-primary/10 rounded-2xl mb-2">
-                <Users className="h-8 w-8 text-primary" />
-             </div>
-             <h2 className="text-3xl font-bold text-slate-900 tracking-tight"><span className='text-blue-500'>Group</span> Connection</h2>
-             <p className="text-slate-500 max-w-sm mx-auto">
-               Select at least two members from the sidebar to start a professional high-quality call.
-             </p>
-          </div>
-
-          {/* Action Buttons */}
-          <div className="flex flex-col sm:flex-row gap-4 w-full max-w-md">
-            <Button 
-              disabled={!isCallEnabled}
-              className="flex-1 h-14 rounded-2xl text-md font-semibold gap-2 shadow-lg shadow-primary/20 transition-all hover:scale-[1.02] active:scale-[0.98]"
-            >
-              <Video className="h-5 w-5" />
-              Video Call
-            </Button>
-            <Button 
-              variant="outline"
-              disabled={!isCallEnabled}
-              className="flex-1 h-14 rounded-2xl text-md font-semibold gap-2 border-2 hover:bg-slate-50 transition-all hover:scale-[1.02] active:scale-[0.98]"
-            >
-              <Phone className="h-5 w-5" />
-              Audio Call
-            </Button>
-          </div>
-
-          {/* Status Indicator */}
-          <div className="pt-4">
-            {selectedMembers.length > 0 ? (
-              <Badge variant="secondary" className="px-4 py-1.5 rounded-full text-slate-600 bg-slate-100 border-none">
-                {selectedMembers.length} member{selectedMembers.length !== 1 ? 's' : ''} selected
-              </Badge>
+       
+          {!activeRoom ? (
+              <div className="max-w-2xl bg-white rounded-3xl border p-12 text-center space-y-8 shadow-xl">
+                <Users className="h-12 w-12 text-primary mx-auto" />
+                <h2 className="text-3xl font-bold">Group Connection</h2>
+                <Button 
+                    onClick={startVideoCall} 
+                    disabled={selectedMembers.length === 0}
+                    className="w-full h-14 rounded-2xl"
+                >
+                  <Video className="mr-2" /> Start Call
+                </Button>
+              </div>
             ) : (
-              <p className="text-xs text-slate-400 italic">No one selected yet</p>
+              <div className="w-full h-full flex flex-col">
+                <div className="grid grid-cols-2 gap-4 flex-1">
+                  {/* Local Video */}
+                  <VideoTile track={null} local={true} room={activeRoom} />
+                  {/* Remote Videos */}
+                  {remoteTracks.map((track) => (
+                    <VideoTile key={track.sid} track={track} />
+                  ))}
+                </div>
+                <Button variant="destructive" onClick={endCall} className="mt-4 rounded-full w-16 h-16 self-center">
+                  <PhoneOff />
+                </Button>
+              </div>
             )}
-          </div>
+
+            {/* Video interface */}
+            <div
+              id="video-grid"
+              className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full mt-6"
+            ></div>
+
+            {/* Incoming Call Modal */}
+            {incomingCallId && (
+              <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50">
+                <div className="bg-white p-8 rounded-3xl shadow-2xl text-center space-y-6">
+                  <div className="animate-bounce bg-green-100 p-4 rounded-full inline-block">
+                    <Video className="text-green-600 h-8 w-8" />
+                  </div>
+                  <h3 className="text-2xl font-bold">Incoming Call</h3>
+                  <div className="flex gap-4">
+                    <Button onClick={() => { acceptCall(incomingCallId); setIncomingCallId(null); }} className="bg-green-500 hover:bg-green-600 px-8">Accept</Button>
+                    <Button onClick={() => setIncomingCallId(null)} variant="outline">Decline</Button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+
+            {/* Status Indicator */}
+            <div className="pt-4">
+              {selectedMembers.length > 0 ? (
+                <Badge variant="secondary" className="px-4 py-1.5 rounded-full text-slate-600 bg-slate-100 border-none">
+                  {selectedMembers.length} member{selectedMembers.length !== 1 ? 's' : ''} selected
+                </Badge>
+              ) : (
+                <p className="text-xs text-slate-400 italic">No one selected yet</p>
+              )}
+            </div>
         </div>
       </div>
-    </div>
+    // </div>
   );
 }
 
