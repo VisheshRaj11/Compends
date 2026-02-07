@@ -17,7 +17,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Input } from "../ui/input"
 import { Textarea } from '../ui/textarea'
 import { Button } from '../ui/button'
-import { useLocation, useNavigate } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useSupabase } from '@/supabase/client'
 import { useUser } from '@clerk/clerk-react'
 
@@ -207,14 +207,16 @@ useEffect(() => {
             animate={{ opacity: 1, y: 0 }}
             className="border-2 rounded-xl border-black/10 bg-white/60 backdrop-blur-[2px] p-6 h-[250px] flex flex-col justify-between hover:border-black transition-all group hover:shadow-md cursor-pointer"
           >
-            <div>
+            <Link
+            to={`/community/projects/page/${communityId}/${project.id}`}
+            >
               <div className="flex justify-between items-start">
                 <Folder className="w-6 h-6 text-gray-400 group-hover:text-black transition-colors" />
                 <ArrowUpRight className="w-5 h-5 text-gray-300 group-hover:text-black transition-colors" />
               </div>
-              <h3 className="mt-4 font-bold text-lg text-gray-900">{project.title}</h3>
+              <h3 className="mt-4 font-bold text-lg text-gray-900 hover:underline underline-offset-4 decoration-2">{project.title}</h3>
               <p className="text-sm text-gray-500 line-clamp-2 mt-2">{project.description}</p>
-            </div>
+            </Link>
             <div className="text-[10px] font-medium text-gray-400">
               Project ID: 00{project.id}
             </div>

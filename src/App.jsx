@@ -10,6 +10,7 @@ import Project from "./components/CommunityPage/Project"
 import Rank from "./components/CommunityPage/Rank"
 import Blog from "./components/CommunityPage/Blog"
 import Gallery from "./components/CommunityPage/Gallery"
+import ProjectPage from "./components/CommunityPage/ProjectPage"
 
 function App() {
   const router = createBrowserRouter([
@@ -38,6 +39,10 @@ function App() {
           {
             path:'projects/:id',
             element:<Project/>
+          },
+          {
+            path:'projects/page/:communityId/:projectId',
+            element:<ProjectPage/>
           },
           {
             path:'ranks/:id',
