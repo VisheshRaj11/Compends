@@ -108,10 +108,6 @@ const Chat = () => {
   },[communityId, supabase])
 
   useEffect(() => {
-
-  },[])
-
-  useEffect(() => {
     const fetchCommunityMembers = async () => {
       const { error, data } = await supabase
         .from("community_members")
