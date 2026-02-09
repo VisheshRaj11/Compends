@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Tldraw, createShapeId } from 'tldraw';
+import { Tldraw } from 'tldraw';
 import 'tldraw/tldraw.css';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
@@ -8,15 +8,17 @@ import {
   Sparkles, 
   CheckSquare, 
   UserPlus,
-  Circle
+  Circle,
+  Loader2
 } from 'lucide-react';
-import axios from 'axios';
+import { useSupabase } from '@/supabase/client';
 
 export default function ProjectCanvas() {
   const [isPanelOpen, setIsPanelOpen] = useState(true);
   const [prompt, setPrompt] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
   const [editor, setEditor] = useState(null);
+  const supabase = useSupabase()
 
   // Mock data for the task list
   const [assignments] = useState([
@@ -33,33 +35,172 @@ export default function ProjectCanvas() {
       setIsGenerating(true);
 
       try {
-        const currentSnapshot = editor.getSnapshot();
-        const shapes = Object.values(currentSnapshot.store).filter(
-          (record) => record.typeName === 'shape'
-        );
+        const shapes = editor.getCurrentPageShapes();
+        // const shapes = Object.values(currentSnapshot.store).filter(
+        //   (record) => record.typeName === 'shape'
+        // );
 
-        const response = await axios.post('/generate-canvas',{
-          prompt: prompt,currentCanvas: shapes,
-        },{
-          headers:{
-              'Content-Type': 'application/json',
-            }
+        const {data, error} = await supabase.functions.invoke('generate-canvas',{
+          body:{prompt: prompt,currentCanvas: shapes}
         })
 
-        const aiGenerateData = response.data;
-
-        if(aiGenerateData?.shapes && Array.isArray(aiGenerateData.shapes)) {
-            editor.mark('ai-generation');
-            editor.createShapes(aiGenerateData.shapes);
-
-            editor.zoomToFit();
+        if(error) {
+          console.log("Error generating canvas", error.message);
+          return;
         }
 
-      } catch (error) {
-        console.error("AI Generation failed:", error);
-      } finally {
-        setIsGenerating(false);
-      }
+        const aiGenerateData = data;
+
+           if(aiGenerateData?.shapes && Array.isArray(aiGenerateData.shapes)) {
+                 const extraTextShapes = [];
+
+                const validateShapes = aiGenerateData.shapes.map(shape => {
+                  // // 1. Ensure basic shape structure
+                  // const base = {
+                  //     id: shape.id,
+                  //     type: shape.type,
+                  //     x: shape.x || 0,
+                  //     y: shape.y || 0,
+                  //     rotation: shape.rotation || 0,
+                  //     index: shape.index || 'a1',
+                  //     parentId: shape.parentId || 'page:page',
+                  //     typeName: 'shape',
+                  // };
+                  const sanitized = {
+                    id: shape.id || `shape:${crypto.randomUUID()}`,
+                    type: shape.type,
+                    x: shape.x || 0,
+                    y: shape.y || 0,
+                    rotation: 0,
+                    index: 'a1',
+                    parentId: 'page:page',
+                    typeName: 'shape',
+                  };
+                  
+                   if (shape.type === 'geo') {
+                  const w = shape.props?.w || 150;
+                  const h = shape.props?.h || 80;
+
+                  sanitized.props = {
+                    geo: shape.props?.geo || 'rectangle',
+                    w,
+                    h,
+                    color: shape.props?.color || 'black',
+                    fill: shape.props?.fill || 'none',
+                    dash: shape.props?.dash || 'draw',
+                    size: shape.props?.size || 'm',
+                  };
+
+                  // 👇 extract label ONLY from GEO
+                  if (shape.props?.text) {
+                    extraTextShapes.push({
+                      id: `shape:text_${sanitized.id}`,
+                      type: 'text',
+                      x: sanitized.x + w / 2,
+                      y: sanitized.y + h / 2,
+                      rotation: 0,
+                      index: 'a1',
+                      parentId: 'page:page',
+                      typeName: 'shape',
+                      props: {
+                        richText: {
+                          type: 'doc',
+                          content: [
+                            {
+                              type: 'paragraph',
+                              content: [
+                                { type: 'text', text: shape.props.text },
+                              ],
+                            },
+                          ],
+                        },
+                        size: 's',
+                      },
+                    });
+                  }
+                }
+                   
+              //  if (shape.type === 'geo') {
+              //     sanitized.props = {
+              //       geo: shape.props?.geo || 'rectangle',
+              //       w: shape.props?.w || 150,
+              //       h: shape.props?.h || 80,
+              //       color: shape.props?.color || 'black',
+              //       fill: shape.props?.fill || 'none',
+              //       dash: shape.props?.dash || 'draw',
+              //       size: shape.props?.size || 'm',
+              //     };
+              //   }
+
+
+                 if (shape.type === 'text') {
+                  sanitized.props = {
+                    richText: {
+                      type: 'doc',
+                      content: [
+                        {
+                          type: 'paragraph',
+                          content: [
+                            { type: 'text', text: shape.props?.text || ' ' },
+                          ],
+                        },
+                      ],
+                    },
+                    color: shape.props?.color || 'black',
+                    size: shape.props?.size || 'm',
+                    font: shape.props?.font || 'draw',
+                  };
+                }
+
+                return sanitized; 
+              });
+            console.log('Sanitized shapes:', validateShapes);
+
+            validateShapes.forEach(s => {
+              if (s.type === 'text') {
+                delete s.props.align;
+                delete s.props.verticalAlign;
+                delete s.props.growY;
+                delete s.props.w;
+              }
+            });
+
+            if(validateShapes.length > 0) {
+              // This creates a point in the undo/redo stack so the user can undo the AI generation
+              editor.markHistoryStoppingPoint('ai-generation');
+              // Create the new shapes
+              const finalShapes = [...validateShapes, ...extraTextShapes];
+              editor.createShapes(finalShapes);
+              
+            setTimeout(() => {
+                extraTextShapes.forEach(textShape => {
+                  const parentId = textShape.id.replace('shape:text_', '');
+
+                  const parentBounds = editor.getShapePageBounds(parentId);
+                  const textBounds = editor.getShapePageBounds(textShape.id);
+
+                  if (!parentBounds || !textBounds) return;
+
+                  editor.updateShape({
+                    id: textShape.id,
+                    type: 'text',
+                    x: parentBounds.x + parentBounds.w / 2 - textBounds.w / 2,
+                    y: parentBounds.y + parentBounds.h / 2 - textBounds.h / 2,
+                  });
+                });
+              }, 0);
+
+
+                // Smoothly zoom to show what the AI built
+                editor.zoomToFit();
+              }
+          }
+
+        } catch (error) {
+          console.error("AI Generation failed:", error);
+        } finally {
+          setIsGenerating(false);
+        }
   }
 
   return (

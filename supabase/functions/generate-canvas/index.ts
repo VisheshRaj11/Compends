@@ -2,7 +2,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import "https://deno.land/x/xhr@0.1.0/mod.ts"
 
 const GEMINI_API_KEY = Deno.env.get('GEMINI_API_KEY')
-const MODEL_NAME = "gemini-1.5-flash";
+const MODEL_NAME = "gemini-2.5-flash";
 
 const corsHeaders = {
     'Access-Control-Allow-Origin': '*',
@@ -57,6 +57,8 @@ serve(async(req) => {
                 "w": number,        // width in pixels
                 "h": number,        // height in pixels
                 "text": "string",   // optional text inside shape
+                "align": "middle", 
+                "verticalAlign": "middle",
                 "color": "black" | "grey" | "light-violet" | "violet" | "blue" | "light-blue" | "yellow" | "orange" | "green" | "light-green" | "light-red" | "red",
                 "fill": "none" | "semi" | "solid" | "pattern",
                 "dash": "draw" | "solid" | "dashed" | "dotted",
@@ -273,11 +275,20 @@ serve(async(req) => {
                 }
                 }),
             }
-        )   
+        ) 
+        
+        if (!response.ok) {
+            const err = await response.text();
+            throw new Error(`Gemini API Error: ${err}`);
+        }
 
-        const aiData = response.data;
+        const aiData = await response.json();
+
         const rawText = aiData.candidates[0].content.parts[0].text;
-        const aiContent = JSON.parse(rawText);
+
+
+        const cleanJson = rawText.replace(/```json|```/g, "").trim();
+        const aiContent = JSON.parse(cleanJson);
 
         return new Response(JSON.stringify(aiContent), {
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
