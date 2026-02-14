@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -9,11 +9,11 @@ import {
   Github, 
   Code2, 
   Terminal, 
-  ChevronRight,
-  TrendingUp,
-  Award,
   ExternalLink
 } from "lucide-react";
+import { useSupabase } from "@/supabase/client";
+import { useUser } from "@clerk/clerk-react";
+import { extractUsername } from "@/utils/ExtractUsername";
 
 // ---------- Mock Data ----------
 const leetcodeUsers = [
@@ -103,6 +103,37 @@ const LeaderboardRow = ({ user, isCurrentUser }) => (
 );
 
 const Rank = () => {
+  const supabase = useSupabase();
+  const {user} =  useUser();
+  const [userData, setUserData] = useState({});
+
+  useEffect(() => {
+    const fetchCurrentUser = async() => {
+       const {data, error} = await supabase.from('users').select('*').eq('clerk_id', user.id);
+       if(error) {
+        console.log("Falied to fetch the user data");
+       }
+      //  console.log(data[0]);
+       userData(data[0])
+    }
+
+    fetchCurrentUser();
+  })
+
+  //Leetcode fetching;
+  const myLeetcodeStats = async() => {
+    const leetcodeUserName = extractUsername(userData?.leetcode);
+    if(!leetcodeUserName) {
+      return new Response("Invalid LeetCode profile URL", { status: 400 })
+    }
+    const {data, error} = await supabase.functions.invoke('fetch_leetcode_stats',{
+      body:{
+        userId: user?.id,
+        leetcodeUserName
+      }
+    });
+  }
+
   return (
     <div className="min-h-screen bg-slate-50/50 text-slate-900 py-6 md:py-12 px-4 md:px-10 lg:px-20">
       <div className="w-full max-w-[1400px] mx-auto">
@@ -110,7 +141,7 @@ const Rank = () => {
         <header className="flex flex-col md:flex-row md:items-center justify-between mb-10 gap-6">
           <div className="space-y-1">
             <h1 className="text-4xl md:text-5xl font-black tracking-tighter text-slate-900">
-              ELITE<span className="text-blue-600">RANK.</span>
+              ELITE<span className="text-blue-800">RANK.</span>
             </h1>
             <p className="text-slate-500 font-medium">Measuring technical excellence across the community.</p>
           </div>
@@ -118,10 +149,6 @@ const Rank = () => {
             <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex-1 md:flex-none min-w-[140px]">
               <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">Total Members</p>
               <p className="text-2xl font-black text-slate-900">1,284</p>
-            </div>
-            <div className="bg-blue-600 p-4 rounded-2xl shadow-lg shadow-blue-200 flex-1 md:flex-none min-w-[140px]">
-              <p className="text-[10px] font-bold text-blue-100 uppercase mb-1">My Global Rank</p>
-              <p className="text-2xl font-black text-white">#04</p>
             </div>
           </div>
         </header>
