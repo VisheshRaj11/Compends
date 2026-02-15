@@ -15,25 +15,6 @@ import { useSupabase } from "@/supabase/client";
 import { useUser, useAuth } from "@clerk/clerk-react";
 import { extractUsername } from "@/utils/ExtractUsername";
 
-// ---------- Mock Data ----------
-// const leetcodeUsers = [
-//   { id: 1, name: "Alex Chen", avatar: "https://i.pravatar.cc/150?img=1", solved: 452, rank: 1, isCurrentUser: false },
-//   { id: 2, name: "Jamie Smith", avatar: "https://i.pravatar.cc/150?img=2", solved: 398, rank: 2, isCurrentUser: false },
-//   { id: 3, name: "Taylor Wong", avatar: "https://i.pravatar.cc/150?img=3", solved: 367, rank: 3, isCurrentUser: false },
-//   { id: 4, name: "Jordan Lee", avatar: "https://i.pravatar.cc/150?img=4", solved: 321, rank: 4, isCurrentUser: true },
-//   { id: 5, name: "Casey Kim", avatar: "https://i.pravatar.cc/150?img=5", solved: 289, rank: 5, isCurrentUser: false },
-//   { id: 6, name: "Morgan Freeman", avatar: "https://i.pravatar.cc/150?img=11", solved: 250, rank: 6, isCurrentUser: false },
-// ];
-
-const gfgUsers = [
-  { id: 1, name: "Riley Johnson", avatar: "https://i.pravatar.cc/150?img=6", solved: 412, rank: 1, isCurrentUser: false },
-  { id: 2, name: "Sage Miller", avatar: "https://i.pravatar.cc/150?img=7", solved: 387, rank: 2, isCurrentUser: false },
-  { id: 3, name: "Quinn Davis", avatar: "https://i.pravatar.cc/150?img=8", solved: 355, rank: 3, isCurrentUser: false },
-  { id: 4, name: "Avery Williams", avatar: "https://i.pravatar.cc/150?img=9", solved: 302, rank: 4, isCurrentUser: true },
-];
-
-const githubUsers = [];
-
 // ---------- Podium Component ----------
 const Podium = ({ users }) => {
   const displayOrder = [users[1], users[0], users[2]];
@@ -120,6 +101,7 @@ const Rank = () => {
   const [leetcodeStats, setLeetcodeStats] = useState(null);
   const [error, setError] = useState(null);
   const [leetCodeUsers, setLeetCodeUsers] = useState([]);
+  const [githubUsers, setGithubUsers] = useState([]);
 
   // const 
 
@@ -204,7 +186,7 @@ const Rank = () => {
         console.log("Failed to fetch leetcode users: ", error.message);
         return ;
       }
-      console.log(data);
+      // console.log(data);
 
       const formattedUsers = data.map((stat, index) => ({
         id: stat.id,
@@ -216,12 +198,90 @@ const Rank = () => {
         isCurrentUser: stat.user_id === user?.id,
       }))
       setLeetCodeUsers(formattedUsers);
-      console.log(formattedUsers);
+      // console.log(formattedUsers);
     }
     fetchLeetUsers();
   },[supabase, user?.id]);
 
-  
+  //This is for user github stats and upsert in db>
+  useEffect(() => {
+      if (!userData?.github) return;
+
+      const fetchGithubStats = async() => {
+        setLoading(true);
+        setError(null);
+
+        const githubUsername = extractUsername(userData.github);
+
+         if (!githubUsername) {
+          setError("Invalid GitHub profile URL");
+          setLoading(false);
+          return;
+        }
+
+        try {
+          const token = await getToken();
+
+          const {data, error} = await supabase.functions.invoke('fetch-github_stats',{
+            body:{username: githubUsername},
+            headers:{Authorization: `Bearer ${token}`}
+          })
+
+           if (error) {
+            console.error("GitHub edge function error:", error);
+            setError(error.message);
+            return;
+          }
+
+          console.log("GitHub stats:", data);
+
+          fetchAllGitHubStats ();
+
+        } catch (error) {
+          console.error("Unexpected error:", err);
+          setError("Failed to fetch GitHub stats.");
+        } finally {
+          setLoading(false);
+        }
+      }
+      fetchGithubStats();
+  },[supabase, getToken, userData]);
+
+const fetchAllGitHubStats  = async() => {
+    const {data, error} = await supabase.from('github_stats')
+          .select(`
+            user_id,
+            github_username,
+            public_repos,
+            followers,
+            total_stars,
+            contributions,
+            users!inner(name, avatar_url, github)  
+          `).order('contributions', {ascending:false})
+
+      if(error) {
+            console.log("Failed to fetch github users: ", error.message);
+            return ;
+      }
+
+      const formattedUsers = data?.map((item, index) => ({
+          id: item.user_id,
+          name: item.users.name,
+          avatar: item.users.avatar_url,
+          solved: item.contributions,
+          github: item.users.github,
+          rank: index + 1,
+          isCurrentUser: item.user_id === user?.id,
+      }))
+       setGithubUsers(formattedUsers);
+       console.log(formattedUsers);
+}
+
+  useEffect(() => {
+  fetchAllGitHubStats();
+}, [user?.id, supabase]);
+
+
   return (
     <div className="min-h-screen bg-slate-50/50 text-slate-900 py-6 md:py-12 px-4 md:px-10 lg:px-20">
       <div className="w-full max-w-[1400px] mx-auto">
@@ -246,16 +306,13 @@ const Rank = () => {
             <TabsTrigger value="leetcode" className="px-8 py-3 rounded-xl font-bold data-[state=active]:bg-slate-900 data-[state=active]:text-white transition-all">
               <Code2 className="mr-2 h-4 w-4" /> LeetCode
             </TabsTrigger>
-            <TabsTrigger value="geeksforgeeks" className="px-8 py-3 rounded-xl font-bold data-[state=active]:bg-slate-900 data-[state=active]:text-white transition-all">
-              <Terminal className="mr-2 h-4 w-4" /> GFG
-            </TabsTrigger>
             <TabsTrigger value="github" className="px-8 py-3 rounded-xl font-bold data-[state=active]:bg-slate-900 data-[state=active]:text-white transition-all">
               <Github className="mr-2 h-4 w-4" /> GitHub
             </TabsTrigger>
           </TabsList>
 
           {['leetcode', 'geeksforgeeks', 'github'].map((platform) => {
-            const users = platform === 'leetcode' ? leetCodeUsers: platform === 'geeksforgeeks' ? gfgUsers : githubUsers;
+            const users = platform === 'leetcode' ? leetCodeUsers: githubUsers;
             return (
               <TabsContent key={platform} value={platform} className="outline-none">
                 {users?.length > 0 ? (
