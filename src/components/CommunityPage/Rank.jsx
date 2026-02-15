@@ -12,18 +12,18 @@ import {
   ExternalLink
 } from "lucide-react";
 import { useSupabase } from "@/supabase/client";
-import { useUser } from "@clerk/clerk-react";
+import { useUser, useAuth } from "@clerk/clerk-react";
 import { extractUsername } from "@/utils/ExtractUsername";
 
 // ---------- Mock Data ----------
-const leetcodeUsers = [
-  { id: 1, name: "Alex Chen", avatar: "https://i.pravatar.cc/150?img=1", solved: 452, rank: 1, isCurrentUser: false },
-  { id: 2, name: "Jamie Smith", avatar: "https://i.pravatar.cc/150?img=2", solved: 398, rank: 2, isCurrentUser: false },
-  { id: 3, name: "Taylor Wong", avatar: "https://i.pravatar.cc/150?img=3", solved: 367, rank: 3, isCurrentUser: false },
-  { id: 4, name: "Jordan Lee", avatar: "https://i.pravatar.cc/150?img=4", solved: 321, rank: 4, isCurrentUser: true },
-  { id: 5, name: "Casey Kim", avatar: "https://i.pravatar.cc/150?img=5", solved: 289, rank: 5, isCurrentUser: false },
-  { id: 6, name: "Morgan Freeman", avatar: "https://i.pravatar.cc/150?img=11", solved: 250, rank: 6, isCurrentUser: false },
-];
+// const leetcodeUsers = [
+//   { id: 1, name: "Alex Chen", avatar: "https://i.pravatar.cc/150?img=1", solved: 452, rank: 1, isCurrentUser: false },
+//   { id: 2, name: "Jamie Smith", avatar: "https://i.pravatar.cc/150?img=2", solved: 398, rank: 2, isCurrentUser: false },
+//   { id: 3, name: "Taylor Wong", avatar: "https://i.pravatar.cc/150?img=3", solved: 367, rank: 3, isCurrentUser: false },
+//   { id: 4, name: "Jordan Lee", avatar: "https://i.pravatar.cc/150?img=4", solved: 321, rank: 4, isCurrentUser: true },
+//   { id: 5, name: "Casey Kim", avatar: "https://i.pravatar.cc/150?img=5", solved: 289, rank: 5, isCurrentUser: false },
+//   { id: 6, name: "Morgan Freeman", avatar: "https://i.pravatar.cc/150?img=11", solved: 250, rank: 6, isCurrentUser: false },
+// ];
 
 const gfgUsers = [
   { id: 1, name: "Riley Johnson", avatar: "https://i.pravatar.cc/150?img=6", solved: 412, rank: 1, isCurrentUser: false },
@@ -78,7 +78,7 @@ const Podium = ({ users }) => {
 const LeaderboardRow = ({ user, isCurrentUser }) => (
   <div className={`
     group flex items-center gap-4 p-4 mb-3 rounded-2xl border transition-all
-    ${isCurrentUser ? 'bg-blue-50 border-blue-200 ring-1 ring-blue-100' : 'bg-white border-slate-100 hover:border-blue-200 hover:shadow-xl hover:shadow-blue-500/5'}
+    ${isCurrentUser ? 'bg-green-50 border-green-200 ring-1 ring-blue-100' : 'bg-white border-slate-100 hover:border-blue-200 hover:shadow-xl hover:shadow-blue-500/5'}
   `}>
     <div className="w-6 text-sm font-black text-slate-300 group-hover:text-blue-500">{user.rank}</div>
     <Avatar className="h-12 w-12 border-2 border-white shadow-sm">
@@ -97,7 +97,16 @@ const LeaderboardRow = ({ user, isCurrentUser }) => (
         <div className="text-lg font-black text-slate-900 leading-none">{user.solved}</div>
         <div className="text-[10px] font-bold text-slate-400 uppercase tracking-tight">Solved</div>
       </div>
-      <ExternalLink className="h-4 w-4 text-slate-300 hidden sm:block" />
+     <a href={user.leetcode}
+      target="_blank" 
+      rel="noopener noreferrer"
+      className="hidden sm:block"
+     >
+       <ExternalLink 
+      
+      className="h-4 w-4 text-slate-500 hidden sm:block " />
+     </a>
+  
     </div>
   </div>
 );
@@ -105,35 +114,114 @@ const LeaderboardRow = ({ user, isCurrentUser }) => (
 const Rank = () => {
   const supabase = useSupabase();
   const {user} =  useUser();
-  const [userData, setUserData] = useState({});
+  const {getToken} = useAuth();
+  const [loading, setLoading] = useState(false);
+  const [userData, setUserData] = useState(null);
+  const [leetcodeStats, setLeetcodeStats] = useState(null);
+  const [error, setError] = useState(null);
+  const [leetCodeUsers, setLeetCodeUsers] = useState([]);
+
+  // const 
 
   useEffect(() => {
+      if (!user?.id) return;
     const fetchCurrentUser = async() => {
        const {data, error} = await supabase.from('users').select('*').eq('clerk_id', user.id);
        if(error) {
         console.log("Falied to fetch the user data");
        }
       //  console.log(data[0]);
-       userData(data[0])
+       setUserData(data[0])
     }
 
     fetchCurrentUser();
-  })
+  },[supabase,user?.id]);
+  
+  //This is for user leetcode stats and upsert in db>
+  useEffect(() => {
+    if (!userData?.leetcode) return;
 
-  //Leetcode fetching;
-  const myLeetcodeStats = async() => {
-    const leetcodeUserName = extractUsername(userData?.leetcode);
-    if(!leetcodeUserName) {
-      return new Response("Invalid LeetCode profile URL", { status: 400 })
-    }
-    const {data, error} = await supabase.functions.invoke('fetch_leetcode_stats',{
-      body:{
-        userId: user?.id,
-        leetcodeUserName
+    const myLeetcodeStats = async() => {
+      setLoading(true);
+      setError(null);
+
+      const leetcodeUserName = extractUsername(userData?.leetcode);
+      if(!leetcodeUserName) {
+        setError("Invalid LeetCode profile URL");
+        setLoading(false);
+        return;
       }
-    });
-  }
+      
+      try {
+        const token = await getToken({ template: "supabase" });
+        // console.log(token?.split(".").length);
+        // console.log(leetcodeUserName);
 
+         const { data:leet, error } = await supabase.functions.invoke(
+          'fetch-leetcode_stats',
+          {
+            body: { username: leetcodeUserName },
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
+
+         if (error) {
+          console.error("Edge function error:", error);
+          setError(error.message);
+        } else {
+          // console.log("LeetCode stats:", leet);
+          setLeetcodeStats(leet.data);
+          // Optionally update your local state or global store with the stats
+        }
+      } catch (error) {
+         console.error("Unexpected error:", error);
+        setError("Failed to fetch LeetCode stats.");
+      } finally {
+         setLoading(false);
+      }
+    }
+    myLeetcodeStats();
+  },[supabase,getToken, userData]);
+
+  
+  //Leetcode fetching;
+  useEffect(() => {
+    const fetchLeetUsers = async() => {
+      const {data, error} = await supabase.from('leetcode_stats').select(`user_id,
+        total_solved,
+        easy_solved,
+        medium_solved,
+        hard_solved,
+        streak,
+        users !inner (
+          name,
+          avatar_url,
+          leetcode
+        )`).order('total_solved', {ascending:false});
+      if(error) {
+        console.log("Failed to fetch leetcode users: ", error.message);
+        return ;
+      }
+      console.log(data);
+
+      const formattedUsers = data.map((stat, index) => ({
+        id: stat.id,
+        name: stat.users.name,
+        avatar: stat.users.avatar_url || 'https://i.pravatar.cc/150?img=default',
+        solved: stat.total_solved,
+        leetcode: stat.users.leetcode,
+        rank: index + 1,
+        isCurrentUser: stat.user_id === user?.id,
+      }))
+      setLeetCodeUsers(formattedUsers);
+      console.log(formattedUsers);
+    }
+    fetchLeetUsers();
+  },[supabase, user?.id]);
+
+  
   return (
     <div className="min-h-screen bg-slate-50/50 text-slate-900 py-6 md:py-12 px-4 md:px-10 lg:px-20">
       <div className="w-full max-w-[1400px] mx-auto">
@@ -167,10 +255,10 @@ const Rank = () => {
           </TabsList>
 
           {['leetcode', 'geeksforgeeks', 'github'].map((platform) => {
-            const users = platform === 'leetcode' ? leetcodeUsers : platform === 'geeksforgeeks' ? gfgUsers : githubUsers;
+            const users = platform === 'leetcode' ? leetCodeUsers: platform === 'geeksforgeeks' ? gfgUsers : githubUsers;
             return (
               <TabsContent key={platform} value={platform} className="outline-none">
-                {users.length > 0 ? (
+                {users?.length > 0 ? (
                   <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
                     {/* Left/Top Section: Podium (Span 5) */}
                     <div className="lg:col-span-5 xl:col-span-4 lg:sticky lg:top-12 h-fit">
