@@ -44,7 +44,7 @@ const HackathonCard = ({ hackathon }) => {
 
   return (
     <Card
-      className="
+      className="       
         bg-blue-950
         group
         rounded-xl
@@ -73,7 +73,7 @@ const HackathonCard = ({ hackathon }) => {
       </div>
 
       {/* Title */}
-      <h3 className="mb-4 line-clamp-2 text-base font-semibol leading-snug">
+      <h3 className="mb-4 line-clamp-2 text-base font-semibol leading-snug  min-h-[3rem] ">
         {title}
       </h3>
 
