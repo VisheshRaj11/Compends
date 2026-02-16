@@ -11,6 +11,7 @@ import Rank from "./components/CommunityPage/Rank"
 import Blog from "./components/CommunityPage/Blog"
 import Gallery from "./components/CommunityPage/Gallery"
 import ProjectPage from "./components/CommunityPage/ProjectPage"
+import Hackathons from "./components/CommunityPage/Hackathons"
 
 function App() {
   const router = createBrowserRouter([
@@ -53,8 +54,8 @@ function App() {
             element:<Blog/>
           },
           {
-            path:'gallery/:id',
-            element:<Gallery/>
+            path:'hackathons/:id',
+            element:<Hackathons/>
           },
         ]
         }

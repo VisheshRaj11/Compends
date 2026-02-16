@@ -5,18 +5,18 @@ import Sidebar from '../components/CommunityPage/Sidebar';
 import ModernBackground from '../components/LandingPage/ModernBackground';
 import { useEffect } from 'react';
 import { useEditUserContext } from '../context/EditContext';
-import { ChartArea, Flame, FolderOpenDot, Image, MessageCircle, PenBox, Video } from 'lucide-react';
+import { ChartArea, Flame, FolderOpenDot, Image, MessageCircle, PenBox, Trophy, Video } from 'lucide-react';
 import { useDispatch, useSelector } from 'react-redux';
 import { setCommunity } from '@/store/CommunitySlice';
-
+import {motion} from "framer-motion";
 
 const navs = [
 { icon: <MessageCircle size={20} />, name: "Chat", route: "chat" },
 { icon: <Video size={20} />, name: "Meet", route: "calling" },
 { icon: <FolderOpenDot size={20} />, name: "Projects", route: "projects" },
 { icon: <ChartArea size={20} />, name: "Ranking", route: "ranks" },
+{ icon: <Trophy size={20} />, name: "Hackathons", route: "hackathons" },
 { icon: <PenBox size={20} />, name: "Blog", route: "blogs" },
-{ icon: <Image size={20} />, name: "Gallery", route: "gallery" }
 ];
 
 const AppLayout = () => {
@@ -40,9 +40,25 @@ const AppLayout = () => {
   }, [location.pathname, dispatch])
 
   if (!isLoaded) return (
-    <div className="h-screen w-full flex items-center justify-center bg-slate-50">
-      <div className="animate-pulse text-slate-400">Loading experience...</div>
-    </div>
+     <motion.div
+      className="h-screen w-full flex items-center justify-center bg-slate-50 bg-[radial-gradient(#000000_1px,transparent_1px)] [background-size:26px_26px]"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.5 }}
+    >
+      <motion.img
+        src="/logo.png"
+        alt="Logo"
+        className="w-40 h-auto sm:w-48 md:w-64 lg:w-80"
+        initial={{ scale: 0.8, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        transition={{
+          duration: 0.8,
+          ease: "easeOut",
+          scale: { type: "spring", damping: 10, stiffness: 100 }
+        }}
+      />
+    </motion.div>
   );
 
   if (!isSignedIn && location.pathname !== '/') {
