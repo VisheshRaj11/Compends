@@ -5,7 +5,7 @@ import Sidebar from '../components/CommunityPage/Sidebar';
 import ModernBackground from '../components/LandingPage/ModernBackground';
 import { useEffect } from 'react';
 import { useEditUserContext } from '../context/EditContext';
-import { ChartArea, Flame, FolderOpenDot, Image, MessageCircle, PenBox, Trophy, Video } from 'lucide-react';
+import { ChartArea, Flame, FolderOpenDot, Image, MessageCircle, PenBox, Rabbit, Trophy, Video } from 'lucide-react';
 import { useDispatch, useSelector } from 'react-redux';
 import { setCommunity } from '@/store/CommunitySlice';
 import {motion} from "framer-motion";
@@ -17,6 +17,7 @@ const navs = [
 { icon: <ChartArea size={20} />, name: "Ranking", route: "ranks" },
 { icon: <Trophy size={20} />, name: "Hackathons", route: "hackathons" },
 { icon: <PenBox size={20} />, name: "Blog", route: "blogs" },
+{ icon: <Rabbit size={20} />, name: "Chill", route: "videos" },
 ];
 
 const AppLayout = () => {
@@ -92,8 +93,8 @@ const AppLayout = () => {
             ${isEditUser ? 'blur-sm brightness-dim pointer-events-none':''}`}>
             {/* Top Navigation Bar (Mobile & Desktop Quick Nav) */}
             <header className='h-16 border-b border-slate-200 bg-white/50 backdrop-blur-sm flex items-center px-6 justify-between sticky top-0 z-20'>
-               <h1 className="font-bold text-xl ">
-                 Community
+               <h1 className="font-bold text-2xl text-gray-900">
+                 Compends
                </h1>
                
                <nav className='flex items-center gap-2 overflow-x-auto no-scrollbar'>

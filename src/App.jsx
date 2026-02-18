@@ -12,6 +12,7 @@ import Blog from "./components/CommunityPage/Blog"
 import Gallery from "./components/CommunityPage/Gallery"
 import ProjectPage from "./components/CommunityPage/ProjectPage"
 import Hackathons from "./components/CommunityPage/Hackathons"
+import VideoPlayer from "./components/CommunityPage/VideoPlayer"
 
 function App() {
   const router = createBrowserRouter([
@@ -56,6 +57,10 @@ function App() {
           {
             path:'hackathons/:id',
             element:<Hackathons/>
+          },
+          {
+            path:'videos/:id',
+            element:<VideoPlayer/>
           },
         ]
         }

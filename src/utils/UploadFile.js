@@ -3,6 +3,7 @@ export const uploadFile = async(file, communityId, supabase) => {
     const path = `${communityId}/${crypto.randomUUID()}.${ext}`;
     const {error} = await supabase.storage.from('chat-files')
         .upload(path, file, {
+            contentType: file.type,
             cacheControl: '3600',
             upsert: false
         })
