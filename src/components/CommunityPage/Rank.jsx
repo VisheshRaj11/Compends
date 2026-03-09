@@ -295,8 +295,8 @@ const fetchAllGitHubStats  = async() => {
           </div>
           <div className="flex gap-4">
             <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex-1 md:flex-none min-w-[140px]">
-              <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">Total Members</p>
-              <p className="text-2xl font-black text-slate-900">1,284</p>
+              <p className="text-[10px] font-bold text-slate-400 uppercase mb-1 text-center">Total Members</p>
+              <p className="text-2xl font-black text-slate-900 text-center">{githubUsers.length }</p>
             </div>
           </div>
         </header>

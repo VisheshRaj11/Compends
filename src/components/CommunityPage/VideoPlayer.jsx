@@ -4,7 +4,6 @@ import { Button } from '../ui/button'
 import { Loader2, Search, PlayCircle, Film } from 'lucide-react'
 import { useSupabase } from '@/supabase/client'
 
-const bgThemes = [{}]
 const VideoPlayer = () => {
   const [query, setQuery] = useState('');
   const [videoList, setVideoList] = useState([]);
@@ -52,16 +51,13 @@ const VideoPlayer = () => {
       </nav>
 
       {/* --- Main Content Layout --- */}
-      {/* Desktop (lg): Uses fixed height (calc) and side-by-side flex.
-          Mobile: Standard block flow so nothing gets hidden.
-      */}
-      <main className="flex flex-col lg:flex-row flex-1 lg:h-[calc(100vh-73px)] lg:overflow-hidden p-4 lg:p-6 gap-6 md:gap-8">
+      <main className={`flex flex-col flex-1 ${videoList.length ? 'lg:flex-row' : ''} lg:h-[calc(100vh-73px)] lg:overflow-hidden p-4 lg:p-6 gap-6 md:gap-8`}>
         
         {/* LEFT: Video Player Section */}
         <div className="flex-1 lg:overflow-y-auto scrollbar-hide">
           <div className="w-full max-w-5xl mx-auto">
             {!selectVideo ? (
-              <div className="aspect-video w-full bg-secondary/20 rounded-2xl flex flex-col items-center justify-center border-2 border-dashed border-muted">
+              <div className="aspect-video w-full bg-secondary/20 rounded-2xl flex flex-col items-center justify-center border-2 border-dashed border-gray-950">
                 <Film className="h-12 w-12 text-muted-foreground/40 mb-3" />
                 <p className="text-muted-foreground text-sm">Search to find amazing content</p>
               </div>
@@ -90,23 +86,19 @@ const VideoPlayer = () => {
         </div>
 
         {/* RIGHT: Sidebar / Video List */}
-        <div className="w-full lg:w-[380px] xl:w-[420px] flex flex-col h-full overflow-hidden">
-          <h3 className="font-bold text-lg mb-4 flex items-center gap-2 px-1">
-            <PlayCircle className="h-5 w-5 text-primary" />
-            Up Next
-          </h3>
-          
+        <div className="w-full  lg:w-[380px] xl:w-[420px] flex flex-col h-full overflow-hidden">
+            {videoList.length !== 0 && (
+              <h3 className="font-bold text-lg mb-4 flex items-center gap-2 px-1">
+                <PlayCircle className="h-5 w-5 text-primary" />
+                Up Next
+              </h3>
+            )}
+           
           {/* This container handles the scrollbar. 
               On mobile, we limit max-height so it doesn't scroll forever. 
           */}
           <div className="flex flex-col gap-4 overflow-y-auto pr-2 custom-scrollbar max-h-[64vh] lg:flex-1">
-            {videoList.length === 0 ? (
-              <div className="text-center py-12 bg-secondary/10 rounded-xl border border-dashed">
-                <p className="text-xs text-muted-foreground px-4">
-                  Enter a keyword above to see recommendations
-                </p>
-              </div>
-            ) : (
+            {videoList.length !== 0 && (
               videoList.map((video) => (
                 <button
                   key={video.id}
