@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Button } from '../../../components/ui/button';
-import { Video, Users, Shield, PhoneOff } from 'lucide-react';
+import { Video, Users, Shield, PhoneOff, MicOff, ScreenShare, VideoOff, ScreenShareOff, Mic } from 'lucide-react';
 import { useParams } from 'react-router-dom';
 import { useSupabase } from '@/supabase/client';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { useUser } from '@clerk/clerk-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { joinLiveKit } from '@/utils/JoinLivekit';
+import { Track } from "livekit-client";
 import VideoTile from './VideoTile';
 
 
@@ -24,67 +25,9 @@ const Chat = () => {
   const [activeRoom, setActiveRoom] = useState(null);
   const [remoteTracks, setRemoteTracks] = useState([]);
   const [localVideoTrack, setLocalVideoTrack] = useState(null);
-
-  // 1. Listen for incoming call invites
-//   useEffect(() => {
-//   if (!user) return;
-
-//   const channel = supabase
-//     .channel(`incoming-calls-${user.id}`)
-//     .on(
-//       'postgres_changes',
-//       {
-//         event: 'INSERT',
-//         schema: 'public',
-//         table: 'call_invites',
-//         filter: `user_id=eq.${user.id}`,
-//       },
-//       (payload) => {
-//         console.log('🔥 Incoming call payload:', payload);
-//           console.log('payload.new.call_id:', payload.new?.call_id);
-//           alert('Call received! ID: ' + payload.new?.call_id);
-//         setIncomingCallId(payload.new.call_id);
-//       }
-//     )
-//     .subscribe((status, err) => {
-//       console.log('📡 Subscription status:', status, err);
-//       if (status === 'SUBSCRIBED') {
-//         console.log('Listening for calls on channel:', `incoming-calls-${user.id}`);
-//       }
-//       if (status === 'CHANNEL_ERROR') {
-//         console.error('Subscription error:', err);
-//       }
-//     });
-
-//   return () => {
-//     supabase.removeChannel(channel);
-//   };
-// }, [user, supabase]);
-
-// useEffect(() => {
-//   if (!user) return;
-//   console.log("Invitee Clerk user:", user.id);
-//   const channel = supabase
-//     .channel("debug-calls")
-//     .on(
-//       "postgres_changes",
-//       {
-//         event: "*",
-//         schema: "public",
-//         table: "call_invites",
-//       },
-//       (payload) => {
-//         console.log("🔥 REALTIME EVENT:", payload);
-//       }
-//     )
-//     .subscribe((status) => {
-//       console.log("Realtime status:", status);
-//     });
-
-//   return () => {
-//     supabase.removeChannel(channel);
-//   };
-// }, [user]);
+  const [isVideoOff, setIsVideoOff] = useState(false);
+  const [isMute, setIsMute] = useState(false);
+  const [isScreenShare, setIsScreenShare] = useState(false);
 
 useEffect(() => {
   const fetchCurrentUser = async() => {
@@ -99,33 +42,6 @@ useEffect(() => {
   fetchCurrentUser();
 },[user]);
 
-// useEffect(() => {
-//   const fetchCommunityMembers = async () => {
-//     const { error, data } = await supabase
-//       .from('community_members')
-//       .select(`role, users(id, name, email, about, avatar_url)`)
-//       .eq('community_id', communityId);
-
-//     if (error) return;
-
-//     const formattedMembers = data.map((row) => ({
-//       ...row.users,
-//       role: row.role,
-//     }));
-
-//     setCommunityMembers(formattedMembers);
-
-//     // build lookup map
-//     const map = {};
-//     formattedMembers.forEach((m) => {
-//       map[m.id] = m;
-//     });
-
-//     setMemberMap(map);
-//   };
-
-//   if (communityId) fetchCommunityMembers();
-// }, [communityId, supabase]);
 
 useEffect(() => {
   if (!user) return;
@@ -180,12 +96,20 @@ useEffect(() => {
   // 2. Handle LiveKit room events
  const handleRoomEvents = (room) => {
 
-  const addTrack = (track) => {
+  const addTrack = (track, publication) => {
+    track.source = publication.source;
     if (track.kind === "video") {
-      setRemoteTracks(prev => {
-        if (prev.find(t => t.sid === track.sid)) return prev;
-        return [...prev, track];
-      });
+      if(publication.source === Track.Source.ScreenShare) {
+        setRemoteTracks(prev => {
+          const filtered = prev.filter(t => t.source !== Track.Source.ScreenShare);
+          return [...filtered, track]
+        })
+      }else{
+        setRemoteTracks(prev => {
+          const filtered = prev.filter(t => t.source !== Track.Source.Camera);
+          return [...filtered, track]
+        })
+      }
     }
     if (track.kind === "audio") {
       const audioElement = track.attach();
@@ -198,7 +122,7 @@ useEffect(() => {
   room.remoteParticipants.forEach((participant) => {
     participant.trackPublications.forEach((publication) => {
       if (publication.isSubscribed && publication.track) {
-        addTrack(publication.track);
+        addTrack(publication.track, publication);
       }
     });
   });
@@ -211,7 +135,7 @@ useEffect(() => {
   // Track subscribed
   room.on("trackSubscribed", (track, publication, participant) => {
     console.log("Track subscribed:", participant.identity);
-    addTrack(track);
+    addTrack(track, publication);
   });
 
   room.on("trackUnsubscribed", (track) => {
@@ -224,7 +148,7 @@ useEffect(() => {
   // 3. Start a new call
   const startVideoCall = async () => {
     try {
-      if (selectedMembers.length < 1) return;
+      if (selectedMembers.length <= 1) return;
 
       const invitees = selectedMembers.filter((id) => id !== currentUserDb);
 
@@ -259,7 +183,7 @@ useEffect(() => {
   const acceptCall = async (callId) => {
     try {
       
-       await navigator.mediaDevices.getUserMedia({ audio: true });
+      await navigator.mediaDevices.getUserMedia({ audio: true });
 
       const { data, error } = await supabase.functions.invoke('generate-token', {
         body: { call_id: callId, user_id: currentUserDb },
@@ -296,13 +220,53 @@ useEffect(() => {
     }
   };
 
+ const toggleVideo = async() => {
+    if (!activeRoom) return;
+
+    const participant = activeRoom.localParticipant;
+
+    await participant.setCameraEnabled(!isVideoOff);
+
+    setIsVideoOff(prev => !prev);
+ }
+
+ const screenTrack = remoteTracks.find(t => t.source === Track.Source.ScreenShare);
+ const cameraTrack = remoteTracks.find(t => t.source === Track.Source.Camera);
+ const displayTrack = screenTrack || cameraTrack;
+
+ const toggleScreenShare = async() => {
+    if (!activeRoom) return;
+
+    const participant = activeRoom.localParticipant;
+
+    await participant.setScreenShareEnabled(!isScreenShare);
+
+    setIsScreenShare(prev => !prev);
+ }
+
+ const toggleMic = async() => {
+    if (!activeRoom) return;
+
+    const participant = activeRoom.localParticipant;
+
+    await participant.setMicrophoneEnabled(!isMute);
+
+    setIsMute(prev => !prev);
+ }
+
   // Manage local track
   useEffect(() => {
     if (!activeRoom) return;
     const localParticipant = activeRoom.localParticipant;
     const updateLocalTrack = () => {
       const tracks = Array.from(localParticipant.videoTrackPublications.values());
-      setLocalVideoTrack(tracks[0]?.track || null);
+      const screen = tracks.find(
+        t => t.source === Track.Source.ScreenShare
+      )?.track;
+        const camera = tracks.find(
+        t => t.source === Track.Source.Camera
+      )?.track;
+      setLocalVideoTrack(screen || camera || null);
     };
     updateLocalTrack();
     localParticipant.on('trackPublished', updateLocalTrack);
@@ -398,19 +362,35 @@ useEffect(() => {
           </div>
         ) : (
           <div className="w-full h-full flex flex-col">
-            <div className="grid grid-cols-2 gap-4 flex-1 min-h-[300px]">
-              <VideoTile track={localVideoTrack} local={true} />
-              {remoteTracks.map((track) => (
-                <VideoTile key={track.sid} track={track} />
-              ))}
+            <div className="grid grid-cols-2 gap-4 flex-1 min-h-[340px]">
+              {/* <VideoTile track={localVideoTrack} local={true} /> */}
+              {localVideoTrack && ( <VideoTile track={localVideoTrack} local={true} />)}
+              {displayTrack && (<VideoTile key={displayTrack.sid} track={displayTrack} />)}
             </div>
-            <Button
+            <div className='w-full flex justify-center lg:gap-12 md:gap-8 gap-5'>
+              <Button
               variant="destructive"
               onClick={endCall}
-              className="mt-4 rounded-full w-16 h-16 self-center"
+              className="mt-4 rounded-full w-16 h-16 self-center cursor-pointer"
             >
               <PhoneOff />
             </Button>
+            <Button 
+            onClick={toggleVideo}
+            className={`mt-4 rounded-full w-16 h-16 self-center cursor-pointer bg-slate-500`}>
+             {isVideoOff ? <Video/> : <VideoOff/>}
+            </Button>
+            <Button 
+            onClick={toggleMic}
+            className={`mt-4 rounded-full w-16 h-16 self-center cursor-pointer`}>
+              {isMute ? <Mic/> : <MicOff/>}
+            </Button>
+            <Button 
+            onClick={toggleScreenShare}
+            className={`mt-4 rounded-full w-16 h-16 self-center cursor-pointer bg-blue-900`}>
+              {isScreenShare ? <ScreenShareOff/> : <ScreenShare/>}
+            </Button>
+            </div>
           </div>
         )}
 
