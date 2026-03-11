@@ -283,7 +283,7 @@ const fetchAllGitHubStats  = async() => {
 
 
   return (
-    <div className="min-h-screen bg-slate-50/50 text-slate-900 py-6 md:py-12 px-4 md:px-10 lg:px-20">
+    <div className="min-h-screen w-full bg-gradient-to-br from-white to-slate-100 bg-[radial-gradient(#cbd5e1_1px,transparent_1px)] [background-size:26px_26px] text-slate-900 py-6 md:py-12 px-4 md:px-10 lg:px-20">
       <div className="w-full max-w-[1400px] mx-auto">
         {/* Header Section */}
         <header className="flex flex-col md:flex-row md:items-center justify-between mb-10 gap-6">

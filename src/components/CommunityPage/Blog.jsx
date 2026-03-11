@@ -85,7 +85,7 @@ const Blog = () => {
   }, [supabase, communityId])
 
   return (
-    <div className="flex h-screen w-full bg-slate-50 overflow-hidden relative">
+    <div className="flex h-screen w-full bg-gradient-to-br from-white to-slate-100 bg-[radial-gradient(#d622b5_1px,transparent_1px)] [background-size:26px_26px] overflow-hidden relative">
 
       {/* LEFT SIDE: Create Blog Sidebar */}
       <aside

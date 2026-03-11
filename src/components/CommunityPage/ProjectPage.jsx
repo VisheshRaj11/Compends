@@ -230,28 +230,6 @@ useEffect(() => {
     }
   }, [assignTask, communityId, supabase]);
 
-  // useEffect(() => {
-  //     const fetchCommunityMembers = async () => {
-  //       const { error, data } = await supabase
-  //         .from("community_members")
-  //         .select(`role, users(id, name, email, about, avatar_url)`)
-  //         .eq('community_id', communityId);
-  
-  //       if (error) {
-  //         console.error("Community member fetch error: ", error.message);
-  //         return;
-  //       }
-        
-  //       const formattedMembers = data.map((row) => ({
-  //         ...row.users,
-  //         role: row.role
-  //       }));
-        
-  //       setCommunityMembers(formattedMembers);
-  //     };
-  
-  //     if (communityId) fetchCommunityMembers();
-  //   }, [communityId, supabase]);
 
   // Load existing drawing from DB
   useEffect(() => {

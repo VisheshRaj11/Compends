@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Button } from '../../components/ui/button';
-import { CirclePlus, MoreVertical, MessageSquare, Plus } from 'lucide-react';
+import { CirclePlus, MoreVertical, MessageSquare, Plus,ChevronRight, ChevronLeft } from 'lucide-react';
 import { useLocation, useParams } from 'react-router-dom';
 import AddUser from './AddUser';
 import { useSupabase } from '../../supabase/client';
@@ -10,6 +10,7 @@ import { Badge } from "../../components/ui/badge";
 import { useUser } from '@clerk/clerk-react';
 import Messages from './Messages';
 import { uploadFile } from '../../utils/UploadFile';
+import { AnimatePresence, motion } from "framer-motion";
 
 const Chat = () => {
   const { id: communityId } = useParams();
@@ -23,6 +24,7 @@ const Chat = () => {
   const fileRef = useRef(null);
   const [supabaseUserId, setSupabaseUserId] = useState(null);
   const {user} = useUser();
+  const [isPanelOpen, setIsPanelOpen] = useState(false);
 
   const handleOverlay = (e) => {
     if (e.target === e.currentTarget) setAddMemberOpen(false);
@@ -134,83 +136,114 @@ const Chat = () => {
 
   return (
     <div className="flex h-screen w-full bg-background overflow-hidden">
-      
-      {/* LEFT PART: Sidebar */}
-      <div className="hidden md:flex md:w-80 lg:w-96 flex-col border-r bg-card">
-        <div className="p-4 h-20 border-b flex items-center justify-between bg-card/50 backdrop-blur-md">
-          <h1 className="text-xl font-bold tracking-tight">Members</h1>
-          <Button 
-            variant="ghost"
-            size="sm"
-            onClick={() => setAddMemberOpen(true)}
-            className="flex items-center gap-2 hover:bg-primary/10 hover:text-primary transition-all text-xs font-semibold"
+      <AnimatePresence>
+        {!isPanelOpen && (
+          <motion.button
+            initial={{ x: -50, opacity: 0 }}
+            animate={{ x: 0, opacity: 1 }}
+            exit={{ x: -50, opacity: 0 }}
+            onClick={() => setIsPanelOpen(true)}
+            className="fixed left-0 top-1/2 -translate-y-1/2 z-[100] bg-white border-2 border-l-0 border-black p-3 rounded-r-xl shadow hover:bg-gray-50 transition-all group"
           >
-            <CirclePlus size={18} />
-            Add User
-          </Button>
-        </div>
-
-        {/* Modal Overlay */}
-        {addMemberOpen && (
-          <div 
-            onClick={handleOverlay}
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
-          >
-            <div className="w-full max-w-md bg-white rounded-2xl shadow-2xl animate-in zoom-in-95 duration-200 overflow-hidden">
-              <AddUser communityId={communityId} setAddMemberOpen={setAddMemberOpen}/>
-            </div>
-          </div>
+            <ChevronRight size={22} className="group-hover:translate-x-1 transition-transform"/>
+          </motion.button>
         )}
+      </AnimatePresence>
 
-        {/* Members List */}
-        <ScrollArea className="flex-1">
-          <div className="p-3 space-y-1">
-            {communityMembers.length > 0 ? (
-              communityMembers.map((member) => (
-                <div 
-                  key={member.id}
-                  onClick={() => setActiveChat(member)}
-                  className={`flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-all duration-200 group ${
-                    activeChat?.id === member.id ? "bg-primary/10 shadow-sm" : "hover:bg-accent"
-                  }`}
+      <AnimatePresence mode="wait">
+        {isPanelOpen && (
+          <motion.div
+            initial={{ x: -320 }}
+            animate={{ x: 0 }}
+            exit={{ x: -320 }}
+            transition={{ type: "spring", stiffness: 200, damping: 25 }}
+            className=" h-full bg-white border-r border-gray-200 flex flex-col z-[110] shadow-xl"
+          >
+            <div className="hidden md:flex md:w-80 lg:w-96 flex-col border-r bg-card">
+              <div className="p-4 h-20 border-b flex items-center justify-between bg-card/50 backdrop-blur-md">
+                <h1 className="text-xl font-bold tracking-tight">Members</h1>
+                <div className='flex items-center'>
+                  <Button 
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setAddMemberOpen(true)}
+                  className="flex items-center gap-2 hover:bg-primary/10 hover:text-primary transition-all text-xs font-semibold"
                 >
-                  <div className="relative">
-                    <Avatar className="h-12 w-12 border-2 border-background shadow-sm">
-                      <AvatarImage src={member.avatar_url} alt={member.name} />
-                      <AvatarFallback className="bg-primary/5 text-primary font-bold">
-                        {member.name?.charAt(0)}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="absolute bottom-0 right-0 h-3 w-3 bg-green-500 border-2 border-white rounded-full"></div>
-                  </div>
+                  <CirclePlus size={18} />
+                  Add User
+                </Button>
+                <Button
+                className={`bg-white text-stone-800 hover:bg-gray-300`}
+                onClick={() => setIsPanelOpen(false)}>
+                  <ChevronLeft size={18}/>
+                </Button>
+                </div>
+              </div>
 
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between">
-                      <p className="font-semibold text-sm truncate">{member.name}</p>
-                      {member.role === 'admin' && (
-                        <Badge variant="secondary" className="text-[10px] h-4 px-1 leading-none uppercase tracking-wider">
-                          Admin
-                        </Badge>
-                      )}
-                    </div>
-                    <p className="text-xs text-muted-foreground truncate leading-relaxed">
-                      {member.about || "Hey there! I am using the community."}
-                    </p>
+              {/* Modal Overlay */}
+              {addMemberOpen && (
+                <div 
+                  onClick={handleOverlay}
+                  className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+                >
+                  <div className="w-full max-w-md bg-white rounded-2xl shadow-2xl animate-in zoom-in-95 duration-200 overflow-hidden">
+                    <AddUser communityId={communityId} setAddMemberOpen={setAddMemberOpen}/>
                   </div>
                 </div>
-              ))
-            ) : (
-              <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
-                <MessageSquare className="h-10 w-10 opacity-20 mb-2" />
-                <p className="text-sm">No members found</p>
-              </div>
-            )}
-          </div>
-        </ScrollArea>
-      </div>
+              )}
+
+              {/* Members List */}
+              <ScrollArea className="flex-1">
+                <div className="p-3 space-y-1">
+                  {communityMembers.length > 0 ? (
+                    communityMembers.map((member) => (
+                      <div 
+                        key={member.id}
+                        onClick={() => setActiveChat(member)}
+                        className={`flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-all duration-200 group ${
+                          activeChat?.id === member.id ? "bg-primary/10 shadow-sm" : "hover:bg-accent"
+                        }`}
+                      >
+                        <div className="relative">
+                          <Avatar className="h-12 w-12 border-2 border-background shadow-sm">
+                            <AvatarImage src={member.avatar_url} alt={member.name} />
+                            <AvatarFallback className="bg-primary/5 text-primary font-bold">
+                              {member.name?.charAt(0)}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div className="absolute bottom-0 right-0 h-3 w-3 bg-green-500 border-2 border-white rounded-full"></div>
+                        </div>
+
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between">
+                            <p className="font-semibold text-sm truncate">{member.name}</p>
+                            {member.role === 'admin' && (
+                              <Badge variant="secondary" className="text-[10px] h-4 px-1 leading-none uppercase tracking-wider">
+                                Admin
+                              </Badge>
+                            )}
+                          </div>
+                          <p className="text-xs text-muted-foreground truncate leading-relaxed">
+                            {member.about || "Hey there! I am using the community."}
+                          </p>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
+                      <MessageSquare className="h-10 w-10 opacity-20 mb-2" />
+                      <p className="text-sm">No members found</p>
+                    </div>
+                  )}
+                </div>
+              </ScrollArea>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* RIGHT PART: Main Chat Area */}
-      <div className="flex flex-col flex-1 h-full bg-background">
+      <div className="flex flex-col flex-1 h-full bg-background bg-gradient-to-br from-white to-slate-100 bg-[radial-gradient(#2ec972_1px,transparent_1px)] [background-size:26px_26px]">
         {/* Chat Header */}
         <header className="h-20 border-b flex items-center justify-between px-6 bg-background/50 backdrop-blur-md">
           {communtiyDetails?.name ? (

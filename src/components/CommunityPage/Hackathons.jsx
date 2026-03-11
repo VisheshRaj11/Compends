@@ -147,7 +147,7 @@ const Hackathons = () => {
   }, []);
 
   return (
-    <div className="min-h-screen bg-white/50 px-4 py-16 selection:bg-slate-900 selection:text-white sm:px-6 lg:px-8">
+    <div className="min-h-screen w-full bg-gradient-to-br from-white to-slate-100 bg-[radial-gradient(#cbd5e1_1px,transparent_1px)] [background-size:26px_26px] px-4 py-16 selection:bg-slate-900 selection:text-white sm:px-6 lg:px-8">
       <div className="mx-auto max-w-7xl">
         {/* Header Section */}
         <div className="relative mb-12 sm:mb-16 space-y-4">

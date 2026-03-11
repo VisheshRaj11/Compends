@@ -8,6 +8,8 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import { useUser } from '@clerk/clerk-react';
 import { Checkbox } from '@/components/ui/checkbox';
+import { AnimatePresence, motion } from "framer-motion";
+import { ChevronRight, ChevronLeft } from "lucide-react";
 import { joinLiveKit } from '@/utils/JoinLivekit';
 import { Track } from "livekit-client";
 import VideoTile from './VideoTile';
@@ -28,6 +30,8 @@ const Chat = () => {
   const [isVideoOff, setIsVideoOff] = useState(false);
   const [isMute, setIsMute] = useState(false);
   const [isScreenShare, setIsScreenShare] = useState(false);
+
+  const [isPanelOpen, setIsPanelOpen] = useState(false);
 
 useEffect(() => {
   const fetchCurrentUser = async() => {
@@ -303,71 +307,176 @@ useEffect(() => {
   };
 
   return (
-    <div className="flex h-screen w-full bg-gray-50/20 overflow-hidden relative">
+    <div className="flex h-screen w-full bg-gradient-to-br from-white to-slate-100 bg-[radial-gradient(#1e337d_1px,transparent_1px)] [background-size:26px_26px] overflow-hidden relative">
       {/* Sidebar */}
-      <div className="hidden md:flex flex-col w-full max-w-[350px] border-r bg-white">
-        <div className="p-6 h-20 border-b flex items-center justify-between">
-          <div>
-            <h1 className="text-xl font-bold tracking-tight text-blue-800">Members</h1>
-            <p className="text-xs text-muted-foreground">{communityMembers.length} members</p>
-          </div>
+     {/* Sidebar toggle button (when closed) */}
+<AnimatePresence>
+  {!isPanelOpen && (
+    <motion.button
+      initial={{ x: -50, opacity: 0 }}
+      animate={{ x: 0, opacity: 1 }}
+      exit={{ x: -50, opacity: 0 }}
+      onClick={() => setIsPanelOpen(true)}
+      className="fixed left-0 top-1/2 -translate-y-1/2 z-[100] bg-white border-2 border-l-0 border-black p-3 rounded-r-xl shadow hover:bg-gray-50 transition-all group"
+    >
+      <ChevronRight size={22} className="group-hover:translate-x-1 transition-transform"/>
+    </motion.button>
+  )}
+</AnimatePresence>
+
+
+{/* Members Sidebar */}
+<AnimatePresence mode="wait">
+  {isPanelOpen && (
+    <motion.div
+      initial={{ x: -320 }}
+      animate={{ x: 0 }}
+      exit={{ x: -320 }}
+      transition={{ type: "spring", stiffness: 200, damping: 25 }}
+      className="w-80 h-full bg-[#f2f0e1] border-r border-gray-200 flex flex-col z-[110] shadow-xl"
+    >
+
+      {/* Header */}
+      <div className="p-6 border-b border-gray-100 flex justify-between items-center shrink-0">
+
+        <div>
+          <h1 className="text-xl font-bold text-blue-800">Members</h1>
+          <p className="text-xs text-muted-foreground">
+            {communityMembers.length} members
+          </p>
         </div>
 
-        <ScrollArea className="flex-1">
-          <div className="p-4 space-y-2">
-            {communityMembers.map((member) => (
-              <div
-                key={member.id}
-                className={`flex items-center gap-3 p-3 rounded-2xl transition-all border ${
-                  selectedMembers.includes(member.id) ? 'bg-primary/5 border-primary/20 shadow-sm' : 'bg-transparent border-transparent hover:bg-slate-100'
-                }`}
-              >
-                <div className="relative">
-                  <Avatar className="h-11 w-11">
-                    <AvatarImage src={member.avatar_url} />
-                    <AvatarFallback>{member.name?.charAt(0)}</AvatarFallback>
-                  </Avatar>
-                  <div className="absolute bottom-0 right-0 h-3 w-3 bg-green-500 border-2 border-white rounded-full"></div>
-                </div>
-                <div className="flex-1 min-w-0" onClick={() => toggleMemberSelection(member.id)}>
-                  <div className="flex items-center gap-2">
-                    <p className="font-semibold text-sm text-slate-800 truncate">{member.name}</p>
-                    {member.role === 'admin' && <Shield className="h-3 w-3 text-blue-500" />}
-                  </div>
-                  <p className="text-xs text-slate-500 truncate">{member.about || 'Active now'}</p>
-                </div>
-                <Checkbox
-                  checked={selectedMembers.includes(member.id)}
-                  onCheckedChange={() => toggleMemberSelection(member.id)}
-                />
-              </div>
-            ))}
-          </div>
-        </ScrollArea>
+        <button
+          onClick={() => setIsPanelOpen(false)}
+          className="p-2 hover:bg-gray-100 rounded-full transition"
+        >
+          <ChevronLeft size={20} className="text-gray-500"/>
+        </button>
+
       </div>
+
+
+      {/* Members list */}
+      <ScrollArea className="flex-1">
+
+        <div className="p-4 space-y-2">
+
+          {communityMembers.map((member) => (
+
+            <div
+              key={member.id}
+              className={`flex items-center gap-3 p-3 rounded-xl border transition
+              ${
+                selectedMembers.includes(member.id)
+                ? "bg-blue-50 border-blue-200"
+                : "hover:bg-slate-100 border-transparent"
+              }`}
+            >
+
+              <Avatar className="h-10 w-10">
+                <AvatarImage src={member.avatar_url}/>
+                <AvatarFallback>{member.name?.charAt(0)}</AvatarFallback>
+              </Avatar>
+
+              <div
+                className="flex-1 cursor-pointer"
+                onClick={() => toggleMemberSelection(member.id)}
+              >
+                <p className="text-sm font-semibold">{member.name}</p>
+                <p className="text-xs text-slate-500">{member.about}</p>
+              </div>
+
+              <Checkbox
+                checked={selectedMembers.includes(member.id)}
+                onCheckedChange={() => toggleMemberSelection(member.id)}
+              />
+
+            </div>
+
+          ))}
+
+        </div>
+
+      </ScrollArea>
+
+    </motion.div>
+  )}
+</AnimatePresence>
 
       {/* Main Content */}
       <div className="flex flex-col flex-1 h-full items-center justify-center p-6 lg:p-12 relative">
         {!activeRoom ? (
-          <div className="max-w-2xl bg-white rounded-3xl border p-12 text-center space-y-8 shadow-xl">
-            <Users className="h-12 w-12 text-primary mx-auto" />
-            <h2 className="text-3xl font-bold">Group Connection</h2>
-            <Button
-              onClick={startVideoCall}
-              disabled={selectedMembers.length === 0}
-              className="w-full h-14 rounded-2xl"
-            >
-              <Video className="mr-2" /> Start Call
-            </Button>
+         <div className='flex flex-col justify-center'>
+            <div className="flex items-center justify-center h-full">
+            <div className="w-full max-w-md mx-auto bg-white/90 backdrop-blur-md rounded-3xl shadow-2xl border border-slate-200 p-8 sm:p-10 text-center space-y-6 transition-all duration-300">
+              {/* Icon */}
+              <div className="flex items-center justify-center">
+                <div className="p-4 rounded-full bg-blue-950 shadow-lg">
+                  <Users className="text-white w-8 h-8 sm:w-9 sm:h-9" />
+                </div>
+              </div>
+
+              {/* Title */}
+              <div>
+                <h2 className="text-xl sm:text-2xl font-bold text-slate-800 tracking-tight">
+                  Start a Group Call
+                </h2>
+                <p className="text-sm text-slate-500 mt-2">
+                  Instantly connect with members of your community through a secure video call.
+                </p>
+              </div>
+
+              {/* Info Cards */}
+              <div className="grid grid-cols-3 gap-3 text-sm">
+                <div className="bg-slate-50 rounded-xl p-3 border">
+                  <Video className="mx-auto text-blue-600 mb-1 w-5 h-5"/>
+                  <p className="text-slate-600 text-xs">HD Video</p>
+                </div>
+                <div className="bg-slate-50 rounded-xl p-3 border">
+                  <Mic className="mx-auto text-green-600 mb-1 w-5 h-5"/>
+                  <p className="text-slate-600 text-xs">Clear Audio</p>
+                </div>
+                <div className="bg-slate-50 rounded-xl p-3 border">
+                  <ScreenShare className="mx-auto text-indigo-600 mb-1 w-5 h-5"/>
+                  <p className="text-slate-600 text-xs">Screen Share</p>
+                </div>
+              </div>
+
+              {/* Selected members indicator */}
+              <div className="bg-blue-50 border border-blue-100 rounded-xl p-3">
+                <p className="text-sm text-blue-700 font-medium">
+                  {selectedMembers.length} member(s) selected
+                </p>
+                <p className="text-xs text-blue-500">
+                  Select at least 2 members to start a call
+                </p>
+              </div>
+
+              {/* Start Call Button */}
+              <Button
+                onClick={startVideoCall}
+                disabled={selectedMembers.length === 0}
+                className="w-full h-12 sm:h-13 rounded-xl bg-blue-950 text-white font-medium text-base shadow-lg hover:shadow-xl transition-all duration-200"
+              >
+                <Video className="mr-2 h-5 w-5" />
+                Start Video Call
+              </Button>
+            </div>
           </div>
+          <div className="pt-4 mx-auto">
+            <Badge variant="secondary" className="px-4 py-1.5 rounded-full text-slate-600 bg-slate-100 border-none">
+              {selectedMembers.length} member(s) selected
+            </Badge>
+          </div>
+         </div>
         ) : (
           <div className="w-full h-full flex flex-col">
-            <div className="grid grid-cols-2 gap-4 flex-1 min-h-[340px]">
+            <div className="grid sm:grid-cols-1 md:grid-cols-2 gap-4 md:flex-1 min-h-[320px]">
               {/* <VideoTile track={localVideoTrack} local={true} /> */}
               {localVideoTrack && ( <VideoTile track={localVideoTrack} local={true} />)}
               {displayTrack && (<VideoTile key={displayTrack.sid} track={displayTrack} />)}
             </div>
-            <div className='w-full flex justify-center lg:gap-12 md:gap-8 gap-5'>
+            <div className='w-full flex justify-center lg:gap-12 md:gap-8 gap-5 absolute bottom-12'>
               <Button
               variant="destructive"
               onClick={endCall}
@@ -393,12 +502,6 @@ useEffect(() => {
             </div>
           </div>
         )}
-
-        <div className="pt-4">
-          <Badge variant="secondary" className="px-4 py-1.5 rounded-full text-slate-600 bg-slate-100 border-none">
-            {selectedMembers.length} member(s) selected
-          </Badge>
-        </div>
       </div>
 
       {/* Incoming Call Modal - Fixed to viewport */}
