@@ -1,10 +1,11 @@
-import { Calendar, MapPin, ExternalLink, Trophy, Layers } from "lucide-react";
+import { Calendar, MapPin, ExternalLink, Trophy, Layers, RefreshCcw } from "lucide-react";
 import { Card, CardHeader, CardContent, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { useSupabase } from '@/supabase/client';
 import { Skeleton } from "@/components/ui/skeleton";
+import { toast } from "react-toastify";
 
 // --- Sub-Components ---
 
@@ -43,93 +44,101 @@ const HackathonCard = ({ hackathon }) => {
     });
 
   return (
-    <Card
-      className="       
-        bg-blue-950
-        group
-        rounded-xl
-        border border-zinc-200
-        p-5
+    <div className="group relative">
+      {/* Gradient border */}
+      <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-blue-200 via-purple-200 to-indigo-200 opacity-0 blur-sm transition group-hover:opacity-100" />
+
+      <Card
+        className="
+        relative
+        h-full
+        rounded-2xl
+        border
+        border-slate-200
+        bg-white/80
+        backdrop-blur-xl
+        shadow-sm
         transition
-        hover:border-zinc-300
-        text-white
-        hover:shadow-sm
+        hover:-translate-y-1
+        hover:shadow-xl
+        p-6
       "
-    >
-      {/* Meta */}
-      <div className="mb-3 flex items-center justify-between">
-        <Badge
-          variant="outline"
-          className="border-zinc-300 bg-zinc-50 text-[11px] uppercase tracking-widest text-zinc-600"
-        >
-          {platform || "Hackathon"}
-        </Badge>
+      >
+        {/* Platform */}
+        <div className="flex items-center justify-between mb-4">
+          <Badge
+            variant="outline"
+            className="bg-slate-50 text-xs uppercase tracking-widest"
+          >
+            {platform || "Hackathon"}
+          </Badge>
 
-        {!end_date && start_date && (
-          <span className="text-xs font-medium text-zinc-500">
-            Live
-          </span>
-        )}
-      </div>
-
-      {/* Title */}
-      <h3 className="mb-4 line-clamp-2 text-base font-semibol leading-snug  min-h-[3rem] ">
-        {title}
-      </h3>
-
-      {/* Info */}
-      <div className="space-y-2 text-sm text-zinc-400">
-        {start_date && (
-          <div className="flex items-center gap-2">
-            <Calendar className="h-4 w-4 text-zinc-200" />
-            <span>
-              {formatDate(start_date)}
-              {end_date && ` – ${formatDate(end_date)}`}
+          {!end_date && start_date && (
+            <span className="text-xs font-medium text-green-600">
+              ● Live
             </span>
-          </div>
-        )}
+          )}
+        </div>
 
-        {location && (
-          <div className="flex items-center gap-2">
-            <MapPin className="h-4 w-4 text-zinc-200" />
-            <span className="truncate">{location}</span>
-          </div>
-        )}
-      </div>
+        {/* Title */}
+        <h3 className="text-lg font-semibold text-slate-900 leading-snug line-clamp-2 min-h-[3rem]">
+          {title}
+        </h3>
 
-      {/* Action */}
-      <div className="mt-5">
-        <Button
-          asChild
-          variant="outline"
-          className="
+        {/* Info */}
+        <div className="mt-4 space-y-2 text-sm text-slate-500">
+          {start_date && (
+            <div className="flex items-center gap-2">
+              <Calendar className="h-4 w-4 text-slate-400" />
+              <span>
+                {formatDate(start_date)}
+                {end_date && ` – ${formatDate(end_date)}`}
+              </span>
+            </div>
+          )}
+
+          {location && (
+            <div className="flex items-center gap-2">
+              <MapPin className="h-4 w-4 text-slate-400" />
+              <span className="truncate">{location}</span>
+            </div>
+          )}
+        </div>
+
+        {/* Button */}
+        <div className="mt-6">
+          <Button
+            asChild
+            className="
             w-full
-            border-zinc-300
-            bg-white
-            text-zinc-800
-            hover:bg-zinc-900
-            hover:text-white
+            rounded-xl
+            bg-slate-900
+            text-white
+            hover:bg-slate-800
             transition
           "
-        >
-          <a href={url} target="_blank" rel="noopener noreferrer">
-            <span className="flex items-center justify-center gap-2">
-              View Details
-              <ExternalLink className="h-4 w-4 opacity-70" />
-            </span>
-          </a>
-        </Button>
-      </div>
-    </Card>
+          >
+            <a href={url} target="_blank" rel="noopener noreferrer">
+              <span className="flex items-center justify-center gap-2">
+                View Details
+                <ExternalLink className="h-4 w-4 opacity-70" />
+              </span>
+            </a>
+          </Button>
+        </div>
+      </Card>
+    </div>
   );
 };
-
 
 // ---------- Main Page ----------
 const Hackathons = () => {
   const [hackathons, setHackathons] = useState([]);
   const [loading, setLoading] = useState(true);
   const supabase = useSupabase();
+  const [cronHackathons, setCronHackathons] = useState(false);
+  const [disabled, setDisabled] = useState(false);
+  const [remainingTime, setRemainingTime] = useState(0);
 
   const fetchHackathons = async () => {
     setLoading(true);
@@ -142,23 +151,101 @@ const Hackathons = () => {
     setLoading(false);
   };
 
+
   useEffect(() => {
     fetchHackathons();
   }, []);
 
+  useEffect(() => {
+    const scrapHackathons = async() => {
+        const {data} = await supabase.functions.invoke('scrape-hackathons');
+        console.log(data);
+    }
+    scrapHackathons();
+  },[supabase])
+  
+  const cronHackathonsFunc = useCallback(async() => {
+    setCronHackathons(true);
+    try{
+      const {error:deleteErr} = await supabase.from('hackathons').delete().not('id','is', null);
+      if(deleteErr) {
+        toast.error("Failed to fetch hackathons");
+        throw new Error("Not able to fetch the hackathons");
+      }
+      const {error:fetchErr} = await supabase.functions.invoke('scrape-hackathons');
+      if(fetchErr) {
+        toast.error("Failed to fetch hackathons");
+        throw new Error("Not able to fetch the hackathons");
+      }
+      localStorage.setItem('hackathonFetchCool',(Date.now() + 15 * 60 * 1000).toString()); 
+      toast.success("Hackathon fetched successfully!");
+      setDisabled(true);
+      }catch(error){
+        console.log('Failed to fetch hackathons',error);
+      } finally{
+        setCronHackathons(false);
+      }
+  },[supabase]);
+
+  useEffect(() => {
+    const coolDown = localStorage.getItem('hackathonFetchCool');
+    if(coolDown) {
+      const remainTime = Number(coolDown) - Date.now();
+      setRemainingTime(remainTime);
+      setDisabled(true);
+    }
+  },[]);
+
+  const formatTime = (time) => {
+    const totalSeconds = Math.floor(time / 1000);
+    const minutes  = Math.floor(totalSeconds / 60);
+    const seconds = totalSeconds % 60;
+    return `${minutes}:${seconds.toString().padStart(2, "0")}`;
+  }
+
+  useEffect(() => {
+    if(!disabled) return;
+    const interval = setInterval(() =>  {
+      setRemainingTime((prev) => {
+        if(prev <= 1000) {
+          clearInterval(interval);
+          setDisabled(false);
+          localStorage.removeItem('hackathonFetchCool');
+          return 0;
+        } 
+        return prev - 1000;
+      })
+    },1000);
+    return () => clearInterval(interval);
+  },[disabled]);
+
   return (
-    <div className="min-h-screen w-full bg-gradient-to-br from-white to-slate-100 bg-[radial-gradient(#cbd5e1_1px,transparent_1px)] [background-size:26px_26px] px-4 py-16 selection:bg-slate-900 selection:text-white sm:px-6 lg:px-8">
+    <div className="min-h-screen w-full bg-gradient-to-br from-white to-slate-100 bg-[radial-gradient(#043a5e_1px,transparent_1px)] [background-size:26px_26px] px-4 py-16 selection:bg-slate-900 selection:text-white sm:px-6 lg:px-8">
       <div className="mx-auto max-w-7xl">
         {/* Header Section */}
         <div className="relative mb-12 sm:mb-16 space-y-4">
-          <div className="flex items-center gap-2 text-sm font-bold uppercase tracking-[0.2em] text-blue-600">
+          <div className="flex items-center gap-2 text-sm font-bold uppercase tracking-[0.2em]">
             <Trophy className="h-4 w-4" />
             <span>Opportunities 2026</span>
           </div>
-          <h1 className="text-4xl font-extrabold tracking-tighter text-slate-900 sm:text-5xl lg:text-6xl">
+          <div className="flex items-center gap-4 md:gap-6 lg:gap-12">
+            <h1 className="text-4xl font-extrabold tracking-tighter text-slate-900 sm:text-5xl lg:text-6xl">
             Latest Hackathons
-          </h1>
-          <p className="max-w-2xl text-base sm:text-lg text-slate-500 sm:text-xl">
+            </h1>
+            <Button 
+            onClick={cronHackathonsFunc}
+            disabled={disabled || cronHackathons}
+            className={`bg-black px-4 w-fit py-5 lg:px-4 lg:py-6 hover:scale-105 cursor-pointer border-none`}>
+              <span>
+                <RefreshCcw
+                className={`${cronHackathons ? 'animate-spin' : ''}`}/>
+              </span>
+              <h2>
+                {disabled ? formatTime(remainingTime) : 'Fetch New One'}
+              </h2>
+            </Button>
+          </div>
+          <p className="max-w-2xl text-base sm:text-lg text-slate-500 sm:text-xl font-semibold z-10">
             Building the future, one commit at a time. Explore curated events from around the globe.
           </p>
           <div className="absolute -left-4 -top-4 h-24 w-24 rounded-full bg-blue-50/50 blur-3xl -z-10" />

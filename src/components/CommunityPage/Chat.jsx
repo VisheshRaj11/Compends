@@ -243,7 +243,7 @@ const Chat = () => {
       </AnimatePresence>
 
       {/* RIGHT PART: Main Chat Area */}
-      <div className="flex flex-col flex-1 h-full bg-background bg-gradient-to-br from-white to-slate-100 bg-[radial-gradient(#2ec972_1px,transparent_1px)] [background-size:26px_26px]">
+      <div className="flex flex-col flex-1 h-full bg-gradient-to-br from-white to-slate-100 bg-[radial-gradient(#2ec972_1px,transparent_1px)] [background-size:26px_26px]">
         {/* Chat Header */}
         <header className="h-20 border-b flex items-center justify-between px-6 bg-background/50 backdrop-blur-md">
           {communtiyDetails?.name ? (
@@ -270,7 +270,7 @@ const Chat = () => {
         </main>
 
         {/* Input Area */}
-        <footer className="p-4 bg-background">
+        <footer className="p-4">
           <div className="max-w-4xl mx-auto flex items-center gap-2 bg-accent/50 p-2 rounded-2xl border focus-within:ring-2 ring-primary/20 transition-all">
             
             {/* The Hidden File Input */}

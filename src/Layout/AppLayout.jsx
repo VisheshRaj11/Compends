@@ -9,6 +9,8 @@ import { ChartArea, Flame, FolderOpenDot, Image, MessageCircle, PenBox, Rabbit, 
 import { useDispatch, useSelector } from 'react-redux';
 import { setCommunity } from '@/store/CommunitySlice';
 import {motion} from "framer-motion";
+import { ToastContainer } from 'react-toastify';
+import "react-toastify/dist/ReactToastify.css";
 
 const navs = [
 { icon: <MessageCircle size={20} />, name: "Chat", route: "chat" },
@@ -83,6 +85,8 @@ const AppLayout = () => {
         <div 
         className={`flex min-h-screen bg-[#f8fafc] text-slate-700
         `}>
+          <ToastContainer
+          position='top-right'/>
           {/* Sidebar - Modernized */}
           <aside className='hidden md:block w-64 lg:w-72 border-r border-slate-200 bg-white/80 backdrop-blur-md sticky top-0 h-screen z-50'>
             <Sidebar />

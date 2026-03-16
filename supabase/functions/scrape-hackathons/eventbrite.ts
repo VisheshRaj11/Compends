@@ -1,24 +1,54 @@
+// eventbrite.ts
+import { fetchWithRetry, parseHTML } from "./utils/utils.ts";
+
 export async function scrapeEventbrite() {
-  const res = await fetch(
-    "https://www.eventbrite.com/d/online/hackathon/"
-  );
-  const html = await res.text();
+  const events = [];
+  let page = 1;
+  const maxPages = 3; // limit to avoid overloading
 
-  const matches = html.match(
-    /<script type="application\/ld\+json">([\s\S]*?)<\/script>/
-  );
+  while (page <= maxPages) {
+    const url = `https://www.eventbrite.com/d/online/hackathon/?page=${page}`;
+    const html = await (await fetchWithRetry(url)).text();
+    const doc = parseHTML(html);
+    if (!doc) break;
 
-  if (!matches) return [];
+    // Find all script tags with LD+JSON
+    const scripts = doc.querySelectorAll('script[type="application/ld+json"]');
+    for (const script of scripts) {
+      try {
+        const data = JSON.parse(script.textContent || "{}");
+        // Eventbrite often uses ItemList or individual Event objects
+        if (data["@type"] === "ItemList" && data.itemListElement) {
+          for (const item of data.itemListElement) {
+            if (item.item?.["@type"] === "Event") {
+              events.push(normalizeEventbriteEvent(item.item));
+            }
+          }
+        } else if (data["@type"] === "Event") {
+          events.push(normalizeEventbriteEvent(data));
+        }
+      } catch {
+        continue;
+      }
+    }
 
-  const data = JSON.parse(matches[1]);
+    // Check if next page exists
+    const nextLink = doc.querySelector('a[aria-label="Next"]');
+    if (!nextLink) break;
+    page++;
+  }
 
-  return data.itemListElement.map((e: any) => ({
-    title: e.item.name,
+  return events;
+}
+
+function normalizeEventbriteEvent(item: any) {
+  return {
+    title: item.name,
     platform: "Eventbrite",
-    url: e.item.url,
-    avatar: e.item.image?.url,
-    start_date: e.item.startDate,
-    end_date: e.item.endDate,
-    location: e.item.location?.name,
-  }));
+    url: item.url,
+    avatar: item.image?.url || null,
+    start_date: item.startDate || null,
+    end_date: item.endDate || null,
+    location: item.location?.name || "Online",
+  };
 }

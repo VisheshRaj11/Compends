@@ -2,6 +2,7 @@ import { DownloadIcon, Edit, Trash, FileText, Check, X, User } from "lucide-reac
 import { useSupabase } from "../../supabase/client";
 import React, { useEffect, useRef, useState } from "react";
 import { Button } from "../ui/button";
+import { useNavigate } from "react-router-dom";
 
 const Messages = ({ communityId, currentUserId }) => {
   const [messages, setMessages] = useState([]);
@@ -10,6 +11,7 @@ const Messages = ({ communityId, currentUserId }) => {
 
   const [editingId, setEditingId] = useState(null);
   const [editText, setEditText] = useState("");
+  const navigate = useNavigate();
 
   // Auto-scroll
   useEffect(() => {
@@ -41,38 +43,41 @@ const Messages = ({ communityId, currentUserId }) => {
   };
 
   const saveEdit = async () => {
-    if (!editText.trim()) return;
-    try {
-      const { error, data } = await supabase
-        .from("messages")
-        .update({ content: editText.trim(), type: "mixed" })
-        .eq("id", editingId)
-        .select("*")
-        .single()
+  if (!editText.trim()) return;
 
-      console.log(data);
-      if (error || !data) throw error || new Error("No data returned");
+  const id = editingId;
+  const newContent = editText.trim();
 
-      setMessages((prev) =>
+  // close editor immediately
+  setEditingId(null);
+  setEditText("");
+
+  try {
+    const { error, data } = await supabase
+      .from("messages")
+      .update({ content:newContent, type: "text" })
+      .eq("id", id)
+      .select("*")
+      .single();
+
+    if (error || !data) throw error || new Error("No data returned");
+
+    setMessages((prev) =>
       prev.map((m) => {
-        if (!m) return m; // safety
-        if (m.id !== editingId) return m;
+        if (!m || m.id !== id) return m;
 
         return {
-          ...m, // preserves user, file, layout, everything
+          ...m,
           content: data.content,
           type: data.type,
           updated_at: data.updated_at,
         };
       })
     );
-      setEditingId(null);
-      setEditText("");
-    } catch (error) {
-      console.log(error);
-      alert("Edit failed");
-    }
-  };
+  } catch (error) {
+    console.error("Update error:", error);
+  }
+};
 
   const deleteMessage = async (msg) => {
     if (!confirm("Delete this message?")) return;
@@ -94,20 +99,38 @@ const Messages = ({ communityId, currentUserId }) => {
       if (!error) setMessages(data || []);
     };
 
-    const channel = supabase
-      .channel(`community-${communityId}`)
-      .on(
-      "postgres_changes",
-      {
-        event: "*",
-        schema: "public",
-        table: "messages",
-        filter: `community_id=eq.${communityId}`,
-      },
-      fetchMessages
-      )
-      .subscribe();
+    // console.log(communityId);
 
+    // const channel = supabase
+    //   .channel(`community-${communityId}`)
+    //   .on(
+    //   "postgres_changes",
+    //   {
+    //     event: "*",
+    //     schema: "public",
+    //     table: "messages",
+    //     // filter: `community_id=eq.${communityId}`,
+    //   },
+    //   (payload) => {
+    //     console.log(payload);
+    //     fetchMessages();
+    //   }
+    //   )
+    //   .subscribe((status) => console.log(status));
+  const channel = supabase
+  .channel("test-channel")
+  .on(
+    "postgres_changes",
+    {
+      event: "*",
+      schema: "public",
+      table: "messages",
+    },
+    (payload) => {
+      console.log("Realtime event:", payload);
+    }
+  )
+  .subscribe((status) => console.log("status:", status));
     fetchMessages();
     return () => supabase.removeChannel(channel);
   }, [communityId, supabase]);
