@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from "@hookform/resolvers/zod"
 import * as z from "zod"
@@ -13,6 +13,8 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "../..
 import { Spinner } from '../../components/ui/spinner'
 import { useSupabase} from '../../supabase/client'
 import { useUser } from '@clerk/clerk-react'
+import { toast } from 'react-toastify'
+import { useNavigate } from 'react-router-dom'
 
 const formSchema = z.object({
   communityName: z.string().min(3, "Community name must be at least 3 characters"),
@@ -23,6 +25,9 @@ const formSchema = z.object({
 const CommunityForm = () => {
   const {user} = useUser()
   const supabase = useSupabase();
+  const navigate = useNavigate();
+  const [communities, setCommunities] = useState([]);
+  // const [insertData, setInsertData] = useState(null);
 
   const form = useForm({
     resolver: zodResolver(formSchema),
@@ -33,24 +38,57 @@ const CommunityForm = () => {
     }
   })
 
+   useEffect(() => {
+      const fetchCommunities = async () => {
+        const { error, data } = await supabase.from("communities").select('*');
+        if (error) return;
+        console.log(data);
+        setCommunities(data);
+      }
+      fetchCommunities()
+    }, [supabase]);
+  
+
   const onSubmit = async (values) => {
-    const {error} = await supabase.from("communities").insert({
-        name:values.communityName,
-        about: values.about,
+    try {
+      const {error, data} = await supabase.from("communities").insert({
+        name:values.communityName.trim(),
+        about: values.about.trim(),
         size: values.size,
         owner_id: user.id
-    })
+    });
 
     if(error) {
-       console.log("Supabse Error: "+error.message);
-       return;
+      console.log("Supabse Error: "+error.message);
+      return;
     }
-    alert("Community created!")
-    console.log("Form Values:", values)
+    // console.log(data?.id);
+    toast.success("Community created successfully");
+
+    setTimeout(() => {
+      navigate(0);
+      navigate(`/community/chat/${communities[0]?.id}`);
+    },3 * 1000);
+    // alert("Community created!")
+    // setInsertData(data);
+    // console.log("Form Values:", values)
+    } catch (error) {
+      console.log(error);
+    }
   }
 
+  // useEffect(() => {
+  //   const channel = supabase.channel(`community_id:${Date.now()}`)
+  //   .on('postgres_changes',{
+  //     event:'*',
+  //     schema: 'public',
+  //     table:'communities',
+  //     filter:``
+  //   })
+  // })
+
   return (
-    <div className="flex items-center justify-center min-h-[80vh] p-4 w-full">
+    <div className="flex items-center bg-[url('/comBg.jpg')] justify-center h-screen p-4 w-full">
       <motion.div 
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}

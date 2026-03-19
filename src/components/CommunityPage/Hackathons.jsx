@@ -177,13 +177,16 @@ const Hackathons = () => {
         toast.error("Failed to fetch hackathons");
         throw new Error("Not able to fetch the hackathons");
       }
-      localStorage.setItem('hackathonFetchCool',(Date.now() + 15 * 60 * 1000).toString()); 
-      toast.success("Hackathon fetched successfully!");
+
+      const cooldown = Date.now() + 15 * 60 * 1000;
+      localStorage.setItem('hackathonFetchCool',cooldown.toString());
+      setRemainingTime(cooldown - Date.now()); 
       setDisabled(true);
+      toast.success("Hackathon fetched successfully!");
       }catch(error){
         console.log('Failed to fetch hackathons',error);
       } finally{
-        setCronHackathons(false);
+        setCronHackathons(false); 
       }
   },[supabase]);
 
@@ -191,8 +194,12 @@ const Hackathons = () => {
     const coolDown = localStorage.getItem('hackathonFetchCool');
     if(coolDown) {
       const remainTime = Number(coolDown) - Date.now();
-      setRemainingTime(remainTime);
-      setDisabled(true);
+      if(remainTime > 0) {
+        setRemainingTime(remainTime);
+         setDisabled(true);
+      }else{
+        localStorage.removeItem("hackathonFetchCool");
+      }
     }
   },[]);
 
@@ -241,7 +248,7 @@ const Hackathons = () => {
                 className={`${cronHackathons ? 'animate-spin' : ''}`}/>
               </span>
               <h2>
-                {disabled ? formatTime(remainingTime) : 'Fetch New One'}
+                {disabled ? `Next Fetch ${formatTime(remainingTime)}` : 'Fetch New One'}
               </h2>
             </Button>
           </div>

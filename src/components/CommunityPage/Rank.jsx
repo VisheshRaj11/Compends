@@ -283,13 +283,13 @@ const fetchAllGitHubStats  = async() => {
 
 
   return (
-    <div className="min-h-screen w-full bg-gradient-to-br from-white to-slate-100 bg-[radial-gradient(#cbd5e1_1px,transparent_1px)] [background-size:26px_26px] text-slate-900 py-6 md:py-12 px-4 md:px-10 lg:px-20">
+    <div className="min-h-screen w-full bg-gradient-to-br from-white to-slate-100 bg-[radial-gradient(#8752de_1px,transparent_1px)] [background-size:26px_26px] text-slate-900 py-6 md:py-12 px-4 md:px-10 lg:px-20">
       <div className="w-full max-w-[1400px] mx-auto">
         {/* Header Section */}
         <header className="flex flex-col md:flex-row md:items-center justify-between mb-10 gap-6">
           <div className="space-y-1">
-            <h1 className="text-4xl md:text-5xl font-black tracking-tighter text-slate-900">
-              ELITE<span className="text-blue-800">RANK.</span>
+            <h1 className="text-4xl md:text-5xl font-black tracking-tighter text-slate-900 flex items-center gap-2">
+            <span><Trophy/></span>  ELITE<span className="">RANK</span>
             </h1>
             <p className="text-slate-500 font-medium">Measuring technical excellence across the community.</p>
           </div>
@@ -302,7 +302,7 @@ const fetchAllGitHubStats  = async() => {
         </header>
 
         <Tabs defaultValue="leetcode" className="w-full">
-          <TabsList className="flex bg-white border border-slate-200 w-full md:w-max p-1 rounded-2xl mb-12 shadow-sm overflow-x-auto">
+          <TabsList className="flex bg-white border border-slate-200 w-full md:w-max p-1 rounded-2xl mb-12 shadow-sm ">
             <TabsTrigger value="leetcode" className="px-8 py-3 rounded-xl font-bold data-[state=active]:bg-slate-900 data-[state=active]:text-white transition-all">
               <Code2 className="mr-2 h-4 w-4" /> LeetCode
             </TabsTrigger>
@@ -322,7 +322,7 @@ const fetchAllGitHubStats  = async() => {
                       <div className="bg-white/40 border border-white p-8 rounded-[3rem] backdrop-blur-md shadow-sm">
                         <div className="text-center mb-6">
                           <Badge className="bg-blue-100 text-blue-600 border-none hover:bg-blue-100 mb-2 uppercase text-[10px] font-bold">Top Performers</Badge>
-                          <h2 className="text-2xl font-black text-slate-900 uppercase italic">The Podium</h2>
+                          <h2 className="text-2xl font-black text-slate-900 uppercase">The Podium</h2>
                         </div>
                         <Podium users={users} />
                         <div className="mt-8 p-4 bg-white rounded-2xl border border-slate-100 text-center">

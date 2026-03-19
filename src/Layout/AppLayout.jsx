@@ -118,7 +118,7 @@ const AppLayout = () => {
                     `}
                   >
                     {nav.icon}
-                    <span className="hidden lg:inline">{nav.name}</span>
+                    <span className="hidden xl:inline">{nav.name}</span>
                   </NavLink>
                   )
                  })}
