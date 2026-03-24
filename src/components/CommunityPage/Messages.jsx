@@ -1,4 +1,4 @@
-import { DownloadIcon, Edit, Trash, FileText, Check, X, User } from "lucide-react";
+import { DownloadIcon, Edit, Trash, FileText, Check, X, User, Pause } from "lucide-react";
 import { useSupabase } from "../../supabase/client";
 import React, { useEffect, useRef, useState } from "react";
 import { Button } from "../ui/button";
@@ -99,41 +99,53 @@ const Messages = ({ communityId, currentUserId }) => {
       if (!error) setMessages(data || []);
     };
 
-    // console.log(communityId);
-
-    // const channel = supabase
-    //   .channel(`community-${communityId}`)
-    //   .on(
-    //   "postgres_changes",
-    //   {
-    //     event: "*",
-    //     schema: "public",
-    //     table: "messages",
-    //     // filter: `community_id=eq.${communityId}`,
-    //   },
-    //   (payload) => {
-    //     console.log(payload);
-    //     fetchMessages();
-    //   }
-    //   )
-    //   .subscribe((status) => console.log(status));
   const channel = supabase
-  .channel("test-channel")
+  .channel(`community-${communityId}`)
   .on(
     "postgres_changes",
     {
       event: "*",
       schema: "public",
       table: "messages",
+      filter:`community_id=eq.${communityId}`
     },
-    (payload) => {
+    async(payload) => {
+      if(payload.eventType === 'INSERT') {
+        const {data} = await supabase.from('messages')
+        .select('id, content, type, file_url, file_name, mime_type, created_at, user:users(id, name, clerk_id), user_id')
+        .eq('id',payload.new.id).single();
+
+        console.log(data);
+
+        if(data) {
+          setMessages((prev) => [...prev, data[0]])
+        }
+      }
+      if(payload.eventType === 'UPDATE') {
+        const {data} = await supabase.from('messages')
+        .select(`id, content, type, file_url, file_name, mime_type, created_at,
+              user:users(id, name, clerk_id),
+              user_id`)
+        .eq('id', payload.new.id).single();
+
+        if(data)  {
+          setMessages((prev) => (
+            prev.map((item) => item.id === data[0].id ? data[0]: item)
+          ));
+        }
+      }
+      if(payload.eventType === 'DELETE') {
+        setMessages((prev) => (
+          prev.filter((item) => item.id !== payload.old.id)
+        ))
+      }
       console.log("Realtime event:", payload);
     }
   )
   .subscribe((status) => console.log("status:", status));
     fetchMessages();
     return () => supabase.removeChannel(channel);
-  }, [communityId, supabase]);
+  }, [communityId]);
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
@@ -142,7 +154,7 @@ const Messages = ({ communityId, currentUserId }) => {
         className="flex-1 overflow-y-auto px-3 py-6 sm:px-6 space-y-6 scroll-smooth"
       >
         {messages.map((msg) => {
-          if (!msg || !msg.user) return null;
+          if (!msg) return null;
           const isMe = msg.user?.clerk_id === currentUserId;
           const isEditing = editingId === msg.id;
           const hasFile = msg.type === "file" || msg.type === "mixed";
@@ -276,7 +288,7 @@ const Messages = ({ communityId, currentUserId }) => {
                     isMe ? "text-indigo-500" : "text-slate-400"
                   }`}
                 >
-                  {new Date(msg.created_at).toLocaleTimeString([], {
+                  {msg.created_at && new Date(msg.created_at).toLocaleTimeString([], {
                     hour: "2-digit",
                     minute: "2-digit",
                   })}
