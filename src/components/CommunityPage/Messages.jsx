@@ -1,8 +1,8 @@
-import { DownloadIcon, Edit, Trash, FileText, Check, X, User, Pause } from "lucide-react";
+import { DownloadIcon, Edit, Trash, FileText, Check, X, User, Pause, AlertCircle } from "lucide-react";
 import { useSupabase } from "../../supabase/client";
 import React, { useEffect, useRef, useState } from "react";
-import { Button } from "../ui/button";
 import { useNavigate } from "react-router-dom";
+import { toast } from "react-toastify";
 
 const Messages = ({ communityId, currentUserId }) => {
   const [messages, setMessages] = useState([]);
@@ -51,7 +51,7 @@ const Messages = ({ communityId, currentUserId }) => {
   // close editor immediately
   setEditingId(null);
   setEditText("");
-
+  
   try {
     const { error, data } = await supabase
       .from("messages")
@@ -59,34 +59,71 @@ const Messages = ({ communityId, currentUserId }) => {
       .eq("id", id)
       .select("*")
       .single();
-
-    if (error || !data) throw error || new Error("No data returned");
-
-    setMessages((prev) =>
-      prev.map((m) => {
-        if (!m || m.id !== id) return m;
-
-        return {
-          ...m,
-          content: data.content,
-          type: data.type,
-          updated_at: data.updated_at,
-        };
-      })
-    );
+      
+      if (error || !data) throw error || new Error("No data returned");
+      
+      
+      setMessages((prev) =>
+        prev.map((m) => {
+          if (!m || m.id !== id) return m;
+          
+          return {
+            ...m,
+            content: data.content,
+            type: data.type,
+            updated_at: data.updated_at,
+          };
+        })
+      );
+      toast.success('Message updated successfully');
   } catch (error) {
     console.error("Update error:", error);
   }
 };
 
-  const deleteMessage = async (msg) => {
-    if (!confirm("Delete this message?")) return;
-    try {
-      const { error } = await supabase.from("messages").delete().eq("id", msg.id);
-      if (error) throw error;
-    } catch (err) {
-      alert("Delete failed");
+const confirmDelete = (onConfirm) => {
+  toast(
+    ({ closeToast }) => (
+      <div className="confirm-toast">
+        <p className="confirm-text flex items-center gap-2"><AlertCircle size={18}/><span className="font-semibold">Are you sure you want to delete?</span></p>
+
+        <div className="confirm-actions mt-2">
+          <button
+            className="bg-green-700 rounded p-1 mr-2 text-white cursor-pointer"
+            onClick={() => {
+              onConfirm();
+              closeToast();
+            }}
+          >
+            Yes, Delete
+          </button>
+
+          <button className="bg-blue-700 rounded p-1 text-white cursor-pointer" onClick={closeToast}>
+            Cancel
+          </button>
+        </div>
+      </div>
+    ),
+    {
+      position: "top-right",
+      autoClose: false,
+      closeOnClick: false,
+      draggable: false,
+      className: "toast-container-custom",
     }
+  );
+};
+
+  const deleteMessage = async (msg) => {
+    confirmDelete(async() => {
+      try {
+        const { error } = await supabase.from("messages").delete().eq("id", msg.id);
+        if (error) throw error;
+      } catch (err) {
+        alert("Delete failed");
+      }
+    })
+    // if (!confirm("Delete this message?")) return;
   };
 
   useEffect(() => {
@@ -124,15 +161,16 @@ const Messages = ({ communityId, currentUserId }) => {
       if(payload.eventType === 'UPDATE') {
         const {data} = await supabase.from('messages')
         .select(`id, content, type, file_url, file_name, mime_type, created_at,
-              user:users(id, name, clerk_id),
-              user_id`)
-        .eq('id', payload.new.id).single();
-
-        if(data)  {
-          setMessages((prev) => (
-            prev.map((item) => item.id === data[0].id ? data[0]: item)
-          ));
-        }
+          user:users(id, name, clerk_id),
+          user_id`)
+          .eq('id', payload.new.id).single();
+          
+          if(data)  {
+            setMessages((prev) => (
+              prev.map((item) => item.id === data[0].id ? data[0]: item)
+            ));
+          }
+          toast.success('Message updated successfully');
       }
       if(payload.eventType === 'DELETE') {
         setMessages((prev) => (
@@ -203,7 +241,7 @@ const Messages = ({ communityId, currentUserId }) => {
                       className={`
                         flex flex-col gap-1 w-fit px-4 py-2.5 rounded-2xl shadow-sm text-[15px] leading-relaxed
                         ${isMe 
-                          ? "bg-black text-white rounded-tr-none" 
+                          ? "bg-blue-950 text-white rounded-tr-none" 
                           : "bg-white border border-slate-200 text-slate-800 rounded-tl-none"}
                       `}
                     >

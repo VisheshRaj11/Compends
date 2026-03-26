@@ -11,6 +11,7 @@ import { uploadFile } from '@/utils/UploadFile';
 import { useSupabase } from '@/supabase/client';
 import { useParams } from 'react-router-dom';
 import { useUser } from '@clerk/clerk-react';
+import { toast } from 'react-toastify';
 
 const formSchema = z.object({
   title: z.string().min(3, "Community name must be at least 3 characters"),
@@ -40,6 +41,7 @@ const Blog = () => {
   });
 
   const fetchBlogs = async () => {
+    // console.log(communityId)
     const { data, error } = await supabase.from('blogs')
       .select('*').eq('community_id', communityId).order('created_at', { ascending: false });
 
@@ -47,6 +49,8 @@ const Blog = () => {
       console.log(error.message);
       return;
     }
+
+    console.log(data);
     setAllBlogs(data);
   }
 
@@ -55,7 +59,7 @@ const Blog = () => {
     setIsSubmitting(true);
     try {
       // Ensure uploadFile returns the PUBLIC URL
-      const { url } = await uploadFile(values.image, communityId, supabase);
+      const { url } = await uploadFile(values.image, supabase);
       
       const { error } = await supabase.from('blogs').insert({
         community_id: communityId, 
@@ -70,7 +74,7 @@ const Blog = () => {
         return;
       }
       
-      alert("Blog Uploaded successfully");
+      toast.success("Blog Uploaded successfully");
       form.reset();
       fetchBlogs(); // Refresh list immediately after upload
     } catch (err) {
@@ -225,7 +229,7 @@ const Blog = () => {
                         <span className="text-xs text-slate-400 font-medium">
                           {new Date(blog.created_at).toLocaleDateString()}
                         </span>
-                        <Button variant="ghost" size="sm" className="h-8 px-2 text-blue-600">
+                        <Button variant="ghost" size="sm" className="h-8 px-2 text-blue-600 cursor-pointer">
                           View <ArrowUpRight className="ml-1 h-3 w-3" />
                         </Button>
                       </div>
@@ -234,7 +238,7 @@ const Blog = () => {
                 ))}
               </div>
             ) : (
-              <div className="text-center py-20 bg-white rounded-xl border border-dashed border-slate-300">
+              <div className="h-70 flex items-center justify-center py-20 bg-white rounded-xl border border-dashed border-slate-300 mt-28">
                 <p className="text-slate-500">No blogs exist in this community yet.</p>
               </div>
             )}

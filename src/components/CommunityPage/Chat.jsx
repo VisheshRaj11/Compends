@@ -11,6 +11,7 @@ import { useUser } from '@clerk/clerk-react';
 import Messages from './Messages';
 import { uploadFile } from '../../utils/UploadFile';
 import { AnimatePresence, motion } from "framer-motion";
+import { toast } from 'react-toastify';
 
 const Chat = () => {
   const { id: communityId } = useParams();
@@ -70,7 +71,7 @@ const Chat = () => {
     });
 
     if (error) throw error;
-    alert('Message send successfully');
+    toast.success('Message send successfully');
     // Cleanup
     setMessageText("");
     if (fileRef.current) fileRef.current.value = "";
