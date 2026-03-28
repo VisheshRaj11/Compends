@@ -9,10 +9,10 @@ import Callings from "./components/CommunityPage/calling/Callings"
 import Project from "./components/CommunityPage/Project"
 import Rank from "./components/CommunityPage/Rank"
 import Blog from "./components/CommunityPage/Blog"
-import Gallery from "./components/CommunityPage/Gallery"
 import ProjectPage from "./components/CommunityPage/ProjectPage"
 import Hackathons from "./components/CommunityPage/Hackathons"
 import VideoPlayer from "./components/CommunityPage/VideoPlayer"
+import UserProfile from "./components/CommunityPage/UserProfile"
 
 function App() {
   const router = createBrowserRouter([
@@ -61,6 +61,10 @@ function App() {
           {
             path:'videos/:id',
             element:<VideoPlayer/>
+          },
+          {
+            path:'userProfile',
+            element:<UserProfile/>
           },
         ]
         }

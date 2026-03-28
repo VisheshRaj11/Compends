@@ -2,7 +2,7 @@ import { UserButton, useUser } from '@clerk/clerk-react'
 import { shadesOfPurple } from '@clerk/themes';
 import React, { useEffect, useState } from 'react'
 import { Button } from '../ui/button';
-import { PlusCircle, Users, EllipsisVertical, PencilIcon, Pen, Trash, Info, Cross, X, Loader2} from 'lucide-react';
+import { PlusCircle, Users, EllipsisVertical, PencilIcon, Pen, Trash, Info, Cross, X, Loader2, User} from 'lucide-react';
 import { useNavigate, NavLink, useLocation } from 'react-router-dom';
 import { useSupabase} from '../../supabase/client'
 import EditUserForm from './EditUserForm';
@@ -177,12 +177,13 @@ useEffect(() => {
             </div>
           </div>
            <Button 
-            onClick={openEdit}
+            onClick={() => navigate('/community/userProfile')}
             variant="ghost" 
             size="icon"
-            className="h-8 w-8 rounded-lg border border-slate-200 bg-slate-50 hover:bg-slate-100"
+            className="h-8 w-8 rounded-full border-slate-200 bg-slate-100 hover:bg-slate-100 cursor-pointer"
           >
-            <PencilIcon size={16} className="text-slate-600" />
+            <User 
+            size={16} className="text-slate-600" />
           </Button>
         </div>
       </div>
@@ -261,7 +262,15 @@ useEffect(() => {
         control={form.control}
         name="about"
         render={({ field }) => (
-          <FormItem>
+          <FormItem> <Button 
+            onClick={() => navigate('userProfile')}
+            variant="ghost" 
+            size="icon"
+            className="h-8 w-8 rounded-full border-slate-200 bg-slate-100 hover:bg-slate-100 cursor-pointer"
+          >
+            <User 
+            size={16} className="text-slate-600" />
+          </Button>
             <FormLabel className="text-sm font-medium">
               Description
             </FormLabel>
