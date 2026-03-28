@@ -63,7 +63,7 @@ function App() {
             element:<VideoPlayer/>
           },
           {
-            path:'userProfile',
+            path:'userProfile/:id',
             element:<UserProfile/>
           },
         ]

@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Button } from '../../components/ui/button';
 import { CirclePlus, MoreVertical, MessageSquare, Plus,ChevronRight, ChevronLeft } from 'lucide-react';
-import { useLocation, useParams } from 'react-router-dom';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import AddUser from './AddUser';
 import { useSupabase } from '../../supabase/client';
 import { Avatar, AvatarFallback, AvatarImage } from "../../components/ui/avatar";
@@ -26,6 +26,7 @@ const Chat = () => {
   const [supabaseUserId, setSupabaseUserId] = useState(null);
   const {user} = useUser();
   const [isPanelOpen, setIsPanelOpen] = useState(false);
+  const navigate = useNavigate();
 
   const handleOverlay = (e) => {
     if (e.target === e.currentTarget) setAddMemberOpen(false);
@@ -114,7 +115,7 @@ const Chat = () => {
     const fetchCommunityMembers = async () => {
       const { error, data } = await supabase
         .from("community_members")
-        .select(`role, users(id, name, email, about, avatar_url)`)
+        .select(`role, users(id, name, email, about, avatar_url,clerk_id)`)
         .eq('community_id', communityId);
 
       if (error) {
@@ -206,7 +207,9 @@ const Chat = () => {
                         }`}
                       >
                         <div className="relative">
-                          <Avatar className="h-12 w-12 border-2 border-background shadow-sm">
+                          <Avatar 
+                          onClick={() => navigate(`/community/userProfile/${member?.clerk_id}`)}
+                          className="h-12 w-12 border-2 border-background shadow-sm">
                             <AvatarImage src={member.avatar_url} alt={member.name} />
                             <AvatarFallback className="bg-primary/5 text-primary font-bold">
                               {member.name?.charAt(0)}

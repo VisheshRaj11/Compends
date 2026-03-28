@@ -30,8 +30,8 @@ const Sidebar = () => {
   const [activeId, setActiveId] = useState(null);
   const [isEditCommunity, setIsEditCommunity] = useState(false);
 
+  console.log(user);
   // const isThisCommunityActive = location.pathname.includes(community.id);
-
   const formSchema = z.object({
     communityName: z.string().min(3, "Community name must be at least 3 characters"),
     about: z.string().min(4, "About must be at least 4 characters").max(50, "About must be within 50 characters"),
@@ -177,7 +177,7 @@ useEffect(() => {
             </div>
           </div>
            <Button 
-            onClick={() => navigate('/community/userProfile')}
+            onClick={() => navigate(`/community/userProfile/${user?.id}`)}
             variant="ghost" 
             size="icon"
             className="h-8 w-8 rounded-full border-slate-200 bg-slate-100 hover:bg-slate-100 cursor-pointer"

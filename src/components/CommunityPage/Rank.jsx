@@ -14,10 +14,12 @@ import {
 import { useSupabase } from "@/supabase/client";
 import { useUser, useAuth } from "@clerk/clerk-react";
 import { extractUsername } from "@/utils/ExtractUsername";
+import { useNavigate } from "react-router-dom";
 
 // ---------- Podium Component ----------
 const Podium = ({ users }) => {
   const displayOrder = [users[1], users[0], users[2]];
+  const navigate = useNavigate()
 
   return (
     <div className="flex items-end justify-center gap-2 md:gap-6 lg:gap-10 mb-12 mt-6">
@@ -56,14 +58,21 @@ const Podium = ({ users }) => {
 };
 
 // ---------- List Row Component ----------
-const LeaderboardRow = ({ user, isCurrentUser }) => (
-  <div className={`
+const LeaderboardRow = ({clerkId, user, isCurrentUser }) => {
+  console.log(clerkId)
+  const navigate = useNavigate();
+  // console.log(user)
+  return (
+    <div className={`
     group flex items-center gap-4 p-4 mb-3 rounded-2xl border transition-all
     ${isCurrentUser ? 'bg-green-50 border-green-200 ring-1 ring-blue-100' : 'bg-white border-slate-100 hover:border-blue-200 hover:shadow-xl hover:shadow-blue-500/5'}
   `}>
     <div className="w-6 text-sm font-black text-slate-300 group-hover:text-blue-500">{user.rank}</div>
     <Avatar className="h-12 w-12 border-2 border-white shadow-sm">
-      <AvatarImage src={user.avatar} />
+      <AvatarImage 
+      className={'cursor-pointer'}
+      onClick={() => navigate(`/community/userProfile/${clerkId}`)}
+      src={user.avatar} />
       <AvatarFallback>{user.name[0]}</AvatarFallback>
     </Avatar>
     <div className="flex-1 min-w-0">
@@ -87,10 +96,10 @@ const LeaderboardRow = ({ user, isCurrentUser }) => (
       
       className="h-4 w-4 text-slate-500 hidden sm:block " />
      </a>
-  
     </div>
   </div>
-);
+  )
+};
 
 const Rank = () => {
   const supabase = useSupabase();
@@ -102,9 +111,9 @@ const Rank = () => {
   const [error, setError] = useState(null);
   const [leetCodeUsers, setLeetCodeUsers] = useState([]);
   const [githubUsers, setGithubUsers] = useState([]);
+  console.log(user);
 
   // const 
-
   useEffect(() => {
       if (!user?.id) return;
     const fetchCurrentUser = async() => {
@@ -178,6 +187,7 @@ const Rank = () => {
         hard_solved,
         streak,
         users !inner (
+          clerk_id,
           name,
           avatar_url,
           leetcode
@@ -186,10 +196,11 @@ const Rank = () => {
         console.log("Failed to fetch leetcode users: ", error.message);
         return ;
       }
-      // console.log(data);
+      // console.log(data[0].users.clerk_id);
 
       const formattedUsers = data.map((stat, index) => ({
-        id: stat.id,
+        id: stat.user_id,
+        clerkId: stat.users.clerk_id, // ✅ IMPORTANT
         name: stat.users.name,
         avatar: stat.users.avatar_url || 'https://i.pravatar.cc/150?img=default',
         solved: stat.total_solved,
@@ -256,7 +267,7 @@ const fetchAllGitHubStats  = async() => {
             followers,
             total_stars,
             contributions,
-            users!inner(name, avatar_url, github)  
+            users!inner(name, avatar_url, github, clerk_id)  
           `).order('contributions', {ascending:false})
 
       if(error) {
@@ -266,6 +277,7 @@ const fetchAllGitHubStats  = async() => {
 
       const formattedUsers = data?.map((item, index) => ({
           id: item.user_id,
+          clerkId: item.users.clerk_id,
           name: item.users.name,
           avatar: item.users.avatar_url,
           solved: item.contributions,
@@ -339,7 +351,7 @@ const fetchAllGitHubStats  = async() => {
                       </div>
                       <div className="grid grid-cols-1 xl:grid-cols-2 gap-x-6">
                         {users.map((user) => (
-                          <LeaderboardRow key={user.id} user={user} isCurrentUser={user.isCurrentUser} />
+                          <LeaderboardRow  clerkId={user?.clerkId} user={user} isCurrentUser={user.isCurrentUser} />
                         ))}
                       </div>
                     </div>

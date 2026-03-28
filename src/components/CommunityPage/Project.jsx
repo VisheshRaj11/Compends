@@ -20,6 +20,8 @@ import { Button } from '../ui/button'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useSupabase } from '@/supabase/client'
 import { useUser } from '@clerk/clerk-react'
+import { isAllOf } from '@reduxjs/toolkit'
+import { toast } from 'react-toastify'
 
 const schema = z.object({
   title: z.string().min(5, "Title too short"),
@@ -35,12 +37,7 @@ const ProjectDashboard = () => {
   const [currentUserId, setCurrentUserId] = useState(null);
   const {user} = useUser();
   const [projects, setProjects] = useState([]);
-  const channelRef = useRef(null);
-  
-  // const projects = [
-  //   { id: 1, title: "Smart Campus", desc: "IoT based tracking system for university" },
-  //   { id: 2, title: "CloudWings", desc: "Medical drone delivery platform" },
-  // ];
+ 
 
   const form = useForm({
     resolver: zodResolver(schema),
@@ -67,23 +64,6 @@ const ProjectDashboard = () => {
   fetchUser();
 }, [user?.id]);
 
-//   useEffect(() => {
-//   if (!currentUserId) return;
-
-//   const signInSupabase = async () => {
-//     const { error } = await supabase.auth.signInWithIdToken({
-//       provider: "custom",
-//       token: currentUserId, // 👈 MUST be a UUID that exists in auth.users
-//     });
-
-//     if (error) {
-//       console.error("Supabase auth error:", error);
-//     }
-//   };
-
-//   signInSupabase();
-// }, [currentUserId]);
-
 useEffect(() => {
     const fetchProject = async() => {
       const {data, error} = await supabase.from('projects').select("*").eq('community_id', communityId).order("created_at",{ascending:false});
@@ -91,64 +71,55 @@ useEffect(() => {
       if(error) {console.log("Error fetching projects"); return;}
       
       setProjects(data);
+      console.log(data);
     }
     fetchProject();
 },[supabase, communityId]);
 
-// Testing Channel:
+useEffect(() => {
+  const channel = supabase.channel(`project-channel${communityId}`)
+  .on('postgres_changes',{
+    event: '*',
+    schema: 'public',
+    table: 'projects',
+    filter: `community_id=eq.${communityId}`, 
+  },
+  (payload) => {
+    console.log("🔥 REALTIME EVENT:", payload);
+      if(payload.eventType === 'INSERT') {
+        setProjects((prev) => [payload.new, ...prev]);
+      }
+  }
+).subscribe();
+
+  return () => supabase.removeChannel(channel);
+},[communityId]);
+
 // useEffect(() => {
 //   const channel = supabase
-//     .channel("hard-proof")
+//     .channel('debug-channel')
 //     .on(
-//       "postgres_changes",
-//       { event: "*", schema: "public", table: "*" },
+//       'postgres_changes',
+//       {
+//         event: '*',
+//         schema: 'public',
+//         table: 'projects',
+//       },
 //       (payload) => {
-//         console.log("🔥 EVENT FIRED:", payload);
+//         console.log("🔥 EVENT:", payload);
 //       }
 //     )
 //     .subscribe((status) => {
-//       console.log("📡 STATUS:", status);
+//       console.log("STATUS:", status);
 //     });
 
-//   return () => supabase.removeChannel(channel);
+//   return () => {
+//     supabase.removeChannel(channel);
+//   };
 // }, []);
-
-
-// Now this is realtime  fetching with channel:
-useEffect(() => {
-    
-    if(!communityId) return;
-    if(channelRef.current) return;
-    
-    channelRef.current = supabase.channel(`projects-community-${communityId}`)
-    .on("postgres_changes",{
-      event:"INSERT",
-      schema: 'public',
-      table:'projects',
-      filter: `community_id=eq.${communityId}`
-    },
-    (payload) => {
-      console.log("Insert: ", payload.new);
-      setProjects((prev) => {
-        if(prev.some((p) => p.id === payload.new.id)) return prev;
-        return [payload.new, ...prev];
-      });
-    }
-  ).subscribe((status) => console.log(status));
-
-  // window.location.reload();
-
-  return () => {
-    if(channelRef.current) {
-      supabase.removeChannel(channelRef.current);
-      channelRef.current = null;
-    }
-  }
-},[communityId, supabase]);
   
  const onSubmit = async (values) => {
   try {
-    // console.log(currentUser+" "+communityId+" "+values.title+" "+values.description)
     const { error } = await supabase.from("projects").insert({
       title: values.title,
       description: values.description,
@@ -161,12 +132,9 @@ useEffect(() => {
       return;
     }
 
-    alert("Project created successfully ✨");
+    toast.success("Project created successfully");
     setIsModalOpen(false);
     form.reset();
-
-    // TODO: Have to do correction in realtime channeling:
-    navigate(0);
     // Optional: Refresh your project list here if not using real-time
   } catch (err) {
     console.error("Supabase Insertion Error:", err);

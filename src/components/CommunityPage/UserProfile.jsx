@@ -28,13 +28,16 @@ import {
   LaptopMinimalCheck,
   BarChart3,
   PieChart,
-  TrendingUp
+  TrendingUp,
+  Pencil
 } from "lucide-react";
 import { useUser } from '@clerk/clerk-react';
 import { useSupabase } from '@/supabase/client';
 
 // Recharts imports
 import { PieChart as RePieChart, Pie, Cell, ResponsiveContainer, Tooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid, AreaChart, Area } from 'recharts';
+import { useParams, useSearchParams } from 'react-router-dom';
+import EditUserForm from './EditUserForm';
 
 const UserProfile = () => {
   const { user } = useUser();
@@ -42,12 +45,15 @@ const UserProfile = () => {
   const [userInfo, setUserInfo] = useState(null);
   const [leetCodeInfo, setLeetCodeInfo] = useState(null);
   const [githubInfo, setGithubInfo] = useState(null);
-
+  const [editUser, setIsEditUser] = useState(false);
+  // const [searchParams] = useParams();
+  const {id} = useParams();
+  console.log(id);
   // Data fetching (same as before)
   useEffect(() => {
     const fetchUserInfo = async () => {
       try {
-        const { data, error } = await supabase.from('users').select('*').eq('clerk_id', user?.id);
+        const { data, error } = await supabase.from('users').select('*').eq('clerk_id', id);
         if (error) throw new Error(error);
         setUserInfo(data[0]);
       } catch (error) {
@@ -67,7 +73,7 @@ const UserProfile = () => {
         hard_solved,
         streak,
         users!inner (name, avatar_url, leetcode)
-      `).eq('user_id', user?.id).order('total_solved', { ascending: false });
+      `).eq('user_id', id).order('total_solved', { ascending: false });
       if (error) {
         console.log("Failed to fetch leetcode users: ", error.message);
         return;
@@ -92,7 +98,7 @@ const UserProfile = () => {
   useEffect(() => {
     const fetchUserGithub = async () => {
       try {
-        const { data, error } = await supabase.from('github_stats').select('*').eq('user_id', user?.id);
+        const { data, error } = await supabase.from('github_stats').select('*').eq('user_id',id);
         if (error) throw new Error(error);
         setGithubInfo(data[0]);
       } catch (error) {
@@ -102,6 +108,23 @@ const UserProfile = () => {
     fetchUserGithub();
   }, [supabase, user?.id]);
 
+  useEffect(() => {
+    const channel = supabase.channel('users-channel')
+    .on('postgres_changes', {
+      event: 'UPDATE',
+      schema:'public',
+      table: 'users'
+    }, (payload) => {
+        if(payload.eventType === "UPDATE") {
+          setUserInfo(payload.new);
+        }
+    }).subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    }
+  },[userInfo]);
+
   // Prepare data for charts
   const leetcodePieData = leetCodeInfo ? [
     { name: 'Easy', value: leetCodeInfo.easy, color: '#22c55e' },
@@ -109,22 +132,12 @@ const UserProfile = () => {
     { name: 'Hard', value: leetCodeInfo.hard, color: '#ef4444' },
   ] : [];
 
-  // Mock GitHub monthly contributions (replace with actual if you have historical data)
-  const githubMonthlyData = [
-    { name: 'Jan', commits: 45 },
-    { name: 'Feb', commits: 52 },
-    { name: 'Mar', commits: 38 },
-    { name: 'Apr', commits: 60 },
-    { name: 'May', commits: 48 },
-    { name: 'Jun', commits: 55 },
-  ];
-
   // Social links
   const socialLinks = [
     { icon: Linkedin, href: userInfo?.linkedin, label: "LinkedIn" },
     { icon: Github, href: userInfo?.github, label: "GitHub" },
     { icon: LaptopMinimalCheck, href: userInfo?.leetcode, label: "LeetCode" },
-    { icon: Mail, href: userInfo?.email, label: "Email" },
+    { icon: Mail, href: '', label: `Email ${user?.emailAddresses}` },
   ];
 
   // Helper to get initials
@@ -132,20 +145,23 @@ const UserProfile = () => {
     return name?.split(' ').map(n => n[0]).join('').toUpperCase() || '';
   };
 
+  const handleOverlay = (e) => {
+    if (e.target === e.currentTarget) setIsEditUser(false);
+  };
   // Calculate solved percentage
-  const totalSolved = leetCodeInfo?.solved || 0;
-  const totalProblems = totalSolved + (leetCodeInfo?.easy || 0) + (leetCodeInfo?.medium || 0) + (leetCodeInfo?.hard || 0); // This is just a placeholder; ideally you'd know total problems per platform. For now we use solved as total.
-  // Actually totalProblems is not known, so we skip progress for now.
+  // const totalSolved = leetCodeInfo?.solved || 0;
+  // const totalProblems = totalSolved + (leetCodeInfo?.easy || 0) + (leetCodeInfo?.medium || 0) + (leetCodeInfo?.hard || 0); // This is just a placeholder; ideally you'd know total problems per platform. For now we use solved as total.
+  // // Actually totalProblems is not known, so we skip progress for now.
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-gray-100 p-2">
       <div className="max-w-9xl mx-auto bg-purple-950/5 rounded-b-2xl px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
-        <div className="space-y-8">
+        <div className="space-y-6">
           {/* Profile Header */}
           <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm transition-all duration-300 hover:shadow-xl">
             <div className="flex flex-col sm:flex-row items-center gap-6 p-6 sm:p-8">
               <Avatar className="h-24 w-24 sm:h-32 sm:w-32 ring-4 ring-primary/10 transition-transform duration-300 hover:scale-105">
-                <AvatarImage src={user?.imageUrl} alt={user?.name} />
+                <AvatarImage src={userInfo?.avatar_url} alt={userInfo?.name} />
                 <AvatarFallback className="text-2xl sm:text-4xl bg-gradient-to-br from-primary/20 to-primary/5">
                   {getInitials(userInfo?.name)}
                 </AvatarFallback>
@@ -164,8 +180,24 @@ const UserProfile = () => {
                   <span className="font-semibold">Bio:</span> {userInfo?.about || "No bio added yet."}
                 </p>
               </div>
+             {
+              id === user?.id && ( <div 
+                onClick={() => setIsEditUser(prev => !prev)}
+                className='flex items-center gap-2 bg-gray-950/5 hover:bg-gray-950/10 hover:border hover:border-purple-300 rounded-md p-2 cursor-pointer duration-300 transition'><Pencil size={18}/> Edit Profile</div>)
+             }
             </div>
           </Card>
+
+          {editUser &&
+            (<div 
+                  onClick={handleOverlay}
+                  className="fixed h-full inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+                >
+                  <div className="w-full max-w-lg bg-white rounded-2xl shadow-2xl animate-in zoom-in-95 duration-200 overflow-hidden">
+                   <EditUserForm userInfo={userInfo} setIsEditUser={setIsEditUser}/>
+                  </div>
+                </div>)
+          }
 
           {/* Stats Row: LeetCode & GitHub */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -264,10 +296,19 @@ const UserProfile = () => {
                   >
                     <h1 className='text-xl font-semibold'>Github Stats</h1>
                     <h3 className="text-gray-400 text-xs font-mono mb-6 uppercase tracking-widest">Commit Consistency</h3>
-                    <img 
-                      src={`https://github-readme-streak-stats.herokuapp.com/?user=${githubInfo?.github_username}&theme=tokyonight&hide_border=true&background=00000000`} 
+                     <img
+                      src={`https://github-readme-streak-stats.herokuapp.com/?user=${githubInfo?.github_username}&theme=tokyonight&hide_border=true&background=00000000`}
                       alt="Streak"
-                      className="w-full max-w-[600px] h-auto object-contain"
+                      loading="lazy"
+                      className="
+                        w-full 
+                        max-w-[500px] 
+                        sm:max-w-[600px] 
+                        md:max-w-[700px] 
+                        lg:max-w-full 
+                        h-auto 
+                        object-contain
+                      "
                     />
                   </div>
               </div>
@@ -311,11 +352,11 @@ const UserProfile = () => {
                   <div className="flex items-center gap-2 text-[10px] text-gray-500">
                     <span>Less</span>
                     <div className="flex gap-1">
-                      <div className="w-3 h-3 rounded-sm bg-[#ebedf0]"></div>
-                      <div className="w-3 h-3 rounded-sm bg-[#9be9a8]"></div>
-                      <div className="w-3 h-3 rounded-sm bg-[#40c463]"></div>
-                      <div className="w-3 h-3 rounded-sm bg-[#30a14e]"></div>
-                      <div className="w-3 h-3 rounded-sm bg-[#216e39]"></div>
+                      <div className="w-3 h-3 rounded-sm bg-[#ebedf0]"></div> {/* empty */}
+                      <div className="w-3 h-3 rounded-sm bg-[#c6e0f5]"></div> {/* very light blue */}
+                      <div className="w-3 h-3 rounded-sm bg-[#8cc6ec]"></div> {/* light blue */}
+                      <div className="w-3 h-3 rounded-sm bg-[#4a90e2]"></div> {/* medium blue */}
+                      <div className="w-3 h-3 rounded-sm bg-[#2c5aa0]"></div> {/* dark blue */}
                     </div>
                     <span>More</span>
                   </div>
@@ -327,7 +368,7 @@ const UserProfile = () => {
                   <img
                     src={`https://ghchart.rshah.org/3b82f6/${githubInfo?.github_username}`}
                     alt={`${githubInfo?.github_username} GitHub Contribution Chart`}
-                    className="min-w-[600px] w-full"
+                    className="min-w-[600px] w-full h-auto"
                   />
                 </div>
               </CardContent>
