@@ -41,7 +41,7 @@ export default function UserSuccessChart() {
       {/* Visual background flair */}
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-blue-500/10 blur-[120px] rounded-full pointer-events-none" />
 
-      <Card className="max-w-5xl mx-auto border-none bg-transparent shadow-none relative z-10">
+      <Card className="max-w-5xl mx-auto border-none bg-transparent shadow-none relative">
         <CardHeader className="text-center mb-10">
           <div className="flex justify-center mb-4">
             <span className="flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 text-xs font-bold uppercase tracking-widest">

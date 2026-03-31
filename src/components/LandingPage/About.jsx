@@ -46,7 +46,7 @@ const About = () => {
             <div className="absolute -top-6 -left-6 w-24 h-24 bg-gray-900/60 rounded-full z-0" />
 
             {/* FIXED RATIO CONTAINER */}
-            <div className="relative z-10 w-full aspect-[16/10] sm:aspect-[4/3] lg:aspect-[11/9] rounded-2xl overflow-hidden border border-slate-100 shadow-2xl">
+            <div className="relative w-full aspect-[16/10] sm:aspect-[4/3] lg:aspect-[11/9] rounded-2xl overflow-hidden border border-slate-100 shadow-2xl">
               <img
                 src="/about.png"
                 alt="Compend Platform Interface"

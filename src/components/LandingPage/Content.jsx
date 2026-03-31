@@ -4,6 +4,7 @@ import Features from './Features'
 import About from './About'
 import LastSection from './LastSection'
 import GrowthChart from './GrowthChart'
+import Accordian from './Accordian'
 
 const Content = () => {
   return (
@@ -13,7 +14,7 @@ const Content = () => {
         <About/>
         <GrowthChart/>
         <LastSection/>
-
+        <Accordian/>
     </div>
   )
 }

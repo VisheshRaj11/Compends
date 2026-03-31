@@ -61,7 +61,7 @@ const Header = () => {
       {showSignin && ( 
         <div 
         onClick={handleOverlay}
-        className='fixed inset-0 flex items-center justify-center bg-black/60'>
+        className='fixed h-screen inset-0 flex items-center justify-center bg-black/60'>
          <div>
            <SignIn
           appearance={{

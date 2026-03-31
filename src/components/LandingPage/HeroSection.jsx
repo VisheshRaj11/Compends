@@ -1,9 +1,11 @@
-import React, { useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Rocket, Users, Target, RotateCcwKeyIcon, Goal } from 'lucide-react';
 import Autoplay from "embla-carousel-autoplay";
 import { Carousel, CarouselContent, CarouselItem } from "../../components/ui/carousel";
 import { Area, AreaChart, ResponsiveContainer, ReferenceDot, LabelList } from "recharts";
+import { shadesOfPurple } from '@clerk/themes';
+import { SignIn } from '@clerk/clerk-react';
 
 // Data with specific milestones for the individual user
 const graphData = [
@@ -18,6 +20,7 @@ const graphData = [
 ];
 
 const HeroSection = () => {
+  const [showSignin, setShowSignin] = useState(false);
   const plugin = useRef(
     Autoplay({
       delay: 2000,
@@ -26,6 +29,12 @@ const HeroSection = () => {
       speed: 0.7,
     })
   );
+
+   const handleOverlay = (e) => {
+    if(e.target === e.currentTarget) {
+        setShowSignin(false);
+    }
+  }
 
   return (
     <section className="relative min-h-[90vh] flex items-center justify-center overflow-hidden text-white py-24 px-6 md:px-12">
@@ -73,11 +82,28 @@ const HeroSection = () => {
             transition={{ delay: 0.3 }}
             className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4"
           >
-            <button className="cursor-pointer px-8 py-4 bg-white/20 text-white font-bold rounded-xl transition-all duration-300 transform hover:scale-105 active:scale-95 w-full sm:w-auto">
+            <button 
+            onClick={() => setShowSignin(prev => !prev)}
+            className="cursor-pointer px-8 py-4 bg-white/20 text-white font-bold rounded-xl transition-all duration-300 transform hover:scale-105 active:scale-95 w-full sm:w-auto">
               Get Started Free
             </button>
           </motion.div>
         </div>
+
+        {showSignin && ( 
+        <div 
+        onClick={handleOverlay}
+        className='fixed h-screen inset-0 flex items-center justify-center bg-black/60 backdrop-blur-2xl z-1200 '>
+         <div>
+           <SignIn
+          appearance={{
+            theme:[shadesOfPurple]
+          }}
+          forceRedirectUrl={'/community'}
+          fallbackRedirectUrl={'/'}/>
+         </div>
+        </div>
+      )}
 
         {/* RIGHT SIDE: The Graph with Feature Points */}
         <motion.div
