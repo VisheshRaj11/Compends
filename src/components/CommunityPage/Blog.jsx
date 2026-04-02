@@ -120,17 +120,23 @@ const Blog = () => {
      try {
       const currentId = activeMenuId;
 
-      const {data, error} = await supabase.from('blogs')
+      const {error} = await supabase.from('blogs')
       .update({
         title:values.title,
         content: values.description
-      }).eq('id',currentBlogInfo.id);
+      }).eq('id',currentId);
 
       if(error) throw new Error(error);
       
-      setAllBlogs((prev) => prev.map((blog) => {
-        blog.id === data.id ? {...blog, title: data.title, content: data.content} : blog
-      }))
+      setAllBlogs((prev) => prev.map((blog) => 
+        blog.id === currentId? {...blog, title: values.title, content: values.description[]} : blog
+      ))
+
+      editForm.reset();
+
+      setActiveMenuId(null);
+
+      setIsEditOpen(false);
       
       toast.success('Blog updated successfully');
      } catch (error) {
