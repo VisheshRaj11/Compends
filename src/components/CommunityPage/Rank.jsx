@@ -349,7 +349,7 @@ const fetchAllGitHubStats  = async() => {
                         <h3 className="text-lg font-bold text-slate-800">All Rankings</h3>
                         <span className="text-xs font-bold text-slate-400">{users.length} Competitors</span>
                       </div>
-                      <div className="grid grid-cols-1 xl:grid-cols-2 gap-x-6">
+                      <div className="grid grid-cols-1 lg:grid-cols-1 xl:grid-cols-2 gap-x-6">
                         {users.map((user) => (
                           <LeaderboardRow  clerkId={user?.clerkId} user={user} isCurrentUser={user.isCurrentUser} />
                         ))}

@@ -1,17 +1,19 @@
 import React, { useEffect, useState } from 'react';
-import { ChevronLeft, ChevronRight, Plus, Image, Search, X, Users, Info, PlusCircle, Loader2, ArrowUpRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Plus, Image, Search, X, Users, Info, PlusCircle, Loader2, ArrowUpRight, Trash, Edit, MoveRight, MoveDown, MoveUpIcon, User } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from "zod";
-import { FormControl, FormField, FormItem, FormLabel, Form } from '../ui/form';
+import { FormControl, FormField, FormItem, FormLabel, Form, FormMessage, FormDescription } from '../ui/form';
 import { uploadFile } from '@/utils/UploadFile';
 import { useSupabase } from '@/supabase/client';
-import { useParams } from 'react-router-dom';
+import { Outlet, useNavigate, useParams } from 'react-router-dom';
 import { useUser } from '@clerk/clerk-react';
 import { toast } from 'react-toastify';
+// import { b } from 'node_modules/@clerk/clerk-react/dist/useAuth-BfjxAfMb.mjs';
+// import { stat } from 'node:fs';
 
 const formSchema = z.object({
   title: z.string().min(3, "Community name must be at least 3 characters"),
@@ -21,24 +23,41 @@ const formSchema = z.object({
       message: "Only image files are allowed"
     }),
 });
+const editFormSchema = z.object({
+  title: z.string().min(3, "Community name must be at least 3 characters"),
+  description: z.string().min(4, "About must be at least 4 characters"),
+});
 
 const Blog = () => {
-  const [isOpen, setIsOpen] = useState(true);
+  const [isOpen, setIsOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const supabase = useSupabase();
-  const { id: communityId } = useParams();
+  const { id: communityId, blog_id: blogId } = useParams();
   const { user } = useUser();
   const [allBlogs, setAllBlogs] = useState([]);
-
+  const navigate = useNavigate();
+  const [blogMenu, setBlogMenu] = useState(false);
+  const [activeMenuId, setActiveMenuId] = useState(null);
+  const [isEditOpen, setIsEditOpen] = useState(false);
+  const [currentBlogInfo, setCurrentBlogInfo] = useState(null);
   
   const form = useForm({
-    resolver: zodResolver(formSchema),
+    resolver: zodResolver(editFormSchema),
     defaultValues: {
       title: "",
       description: "",
       image: undefined,
     }
   });
+
+  const editForm = useForm({
+    resolver: zodResolver(editFormSchema),
+    defaultValues: {
+      title: currentBlogInfo?.title ||  "",
+      description: currentBlogInfo?.content || "",
+      // image: undefined,
+    }
+  })
 
   const fetchBlogs = async () => {
     // console.log(communityId)
@@ -83,13 +102,121 @@ const Blog = () => {
       setIsSubmitting(false);
     }
   };
+
+  const handleDelete = async() => {
+    const currentId = activeMenuId;
+    try {
+      const {error} = await supabase.from('blogs')
+      .delete().eq('id', currentId);
+      if(error) throw new Error(error);
+      toast.success("Blog deleted successfully");
+      activeMenuId(null);
+    } catch (error) {
+      console.log(error);
+    }
+  }
+
+  const handleEdit = async(values) => {
+     try {
+      const currentId = activeMenuId;
+
+      const {data, error} = await supabase.from('blogs')
+      .update({
+        title:values.title,
+        content: values.description
+      }).eq('id',currentBlogInfo.id);
+
+      if(error) throw new Error(error);
+      
+      setAllBlogs((prev) => prev.map((blog) => {
+        blog.id === data.id ? {...blog, title: data.title, content: data.content} : blog
+      }))
+      
+      toast.success('Blog updated successfully');
+     } catch (error) {
+       console.log(error);
+     }
+  }
   
   useEffect(() => {
     fetchBlogs();
-  }, [supabase, communityId])
+  }, [supabase, communityId]);
+
+
+  //If we dont do this. Exisiting value of the blog can't shown because the data is fetched asyncronously
+  //when the data is load , the editForm had been initialized already as a result null value.
+  useEffect(() => {
+  if (currentBlogInfo) {
+    editForm.reset({
+      title: currentBlogInfo.title,
+      description: currentBlogInfo.content,
+    });
+  }
+}, [currentBlogInfo]);
+
+  //Fetch current edit triggered blog:
+  useEffect(() => {
+    if(!activeMenuId) return ;
+    const currentId = activeMenuId;
+    const fetchCurrentBlogInfo = async() => {
+      try {
+         const {data, error} = await supabase.
+        from('blogs').select('*').eq('id',currentId).single();
+        
+        if(error) throw new Error(error);
+
+        // console.log(data[0]);
+        setCurrentBlogInfo(data[0]);
+        // console.log(currentBlogInfo?.title);
+      } catch (error) {
+        console.log(error);
+      }
+    }
+    fetchCurrentBlogInfo();
+  },[activeMenuId])
+
+  useEffect(() => {
+    const channel = supabase.channel(`community-${communityId}`)
+    .on('postgres_changes',{
+      event: '*',
+      schema: 'public',
+      table: 'blogs',
+      // filter : `community_id=eq.${String(communityId)}`
+    },
+  (payload) => {
+  console.log("Realtime payload:", payload);
+
+  if (payload.eventType === "INSERT") {
+    setAllBlogs(prev => [payload.new, ...prev]);
+  }
+
+  if (payload.eventType === "DELETE") {
+    setAllBlogs(prev =>
+      prev.filter((p) => p.id !== payload.old.id)
+    );
+  }
+
+  if (payload.eventType === "UPDATE") {
+    setAllBlogs(prev =>
+      prev.map((p) =>
+        p.id === payload.new.id ? payload.new : p
+      )
+    );
+  }
+}
+).subscribe();
+
+  return () => supabase.removeChannel(channel);
+  
+  },[communityId]);
 
   return (
-    <div className="flex h-screen w-full bg-gradient-to-br from-white to-slate-100 bg-[radial-gradient(#d622b5_1px,transparent_1px)] [background-size:26px_26px] overflow-hidden relative">
+    (blogId ? (
+      <Outlet/>
+    ) 
+    : 
+    (
+      <div className="flex h-screen w-full bg-gradient-to-br from-white to-slate-100 bg-[radial-gradient(#d622b5_1px,transparent_1px)] [background-size:26px_26px] overflow-hidden relative rounded-xl">
 
       {/* LEFT SIDE: Create Blog Sidebar */}
       <aside
@@ -132,7 +259,7 @@ const Blog = () => {
                       <FormControl>
                         <div className="relative">
                           <Info className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                          <Textarea rows={10} placeholder="Share your blog" className="pl-9" {...field} />
+                          <Textarea rows={5} placeholder="Share your blog" className="pl-9 overflow-y-scroll resize-none" {...field} />
                         </div>
                       </FormControl>
                     </FormItem>
@@ -207,36 +334,187 @@ const Blog = () => {
             </header>
 
             {allBlogs.length !== 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {allBlogs.map((blog) => (
-                  <div key={blog.id} className="group flex flex-col bg-white rounded-xl overflow-hidden border border-slate-200 shadow-sm hover:shadow-md transition-all">
-                    <div className="relative aspect-video w-full overflow-hidden bg-slate-100">
-                      <img 
-                        src={blog.image} 
-                        alt={blog.title} 
-                        className="object-cover w-full h-full group-hover:scale-105 transition-transform duration-300"
-                        onError={(e) => { e.target.src = 'https://placehold.co/600x400?text=Image+Not+Found'; }}
-                      />
-                    </div>
-                    <div className="p-5 flex flex-col flex-1">
-                      <h2 className="text-lg font-bold text-slate-800 line-clamp-1 mb-2 group-hover:text-blue-600 transition-colors">
-                        {blog.title}
-                      </h2>
-                      <p className="text-slate-600 text-sm line-clamp-3 mb-4 flex-1">
-                        {blog.content}
-                      </p>
-                      <div className="flex items-center justify-between mt-auto pt-4 border-t border-slate-100">
-                        <span className="text-xs text-slate-400 font-medium">
-                          {new Date(blog.created_at).toLocaleDateString()}
-                        </span>
-                        <Button variant="ghost" size="sm" className="h-8 px-2 text-blue-600 cursor-pointer">
-                          View <ArrowUpRight className="ml-1 h-3 w-3" />
-                        </Button>
-                      </div>
-                    </div>
+             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 items-start">
+  {allBlogs.map((blog) => (
+    <div
+      key={blog.id}
+      className="group flex flex-col bg-white rounded-xl overflow-hidden border border-slate-200 shadow-sm hover:shadow-md transition-all duration-300"
+    >
+      {/* IMAGE */}
+      <div className="relative aspect-video w-full overflow-hidden bg-slate-100">
+        <img
+          src={blog.image}
+          alt={blog.title}
+          className="object-cover w-full h-full group-hover:scale-105 transition-transform duration-300"
+          onError={(e) => {
+            e.target.src =
+              "https://placehold.co/600x400?text=Image+Not+Found";
+          }}
+        />
+      </div>
+
+      {/* CONTENT */}
+      <div className="p-5 flex flex-col min-h-[230px]">
+        <h2 className="text-lg font-bold text-slate-800 line-clamp-1 mb-2 group-hover:text-blue-600 transition-colors">
+          {blog.title}
+        </h2>
+
+        <p className="text-slate-600 text-sm line-clamp-3 mb-4">
+          {blog.content}
+        </p>
+
+        {/* FOOTER */}
+        <div className="flex items-center justify-between mt-auto pt-4 border-t border-slate-100">
+          <span className="text-xs text-slate-400 font-medium">
+            {new Date(blog.created_at).toLocaleDateString()}
+          </span>
+
+          <Button
+            onClick={() =>
+              navigate(
+                `/community/blogs/${communityId}/viewBlog/${blog.id}`
+              )
+            }
+            variant="ghost"
+            size="sm"
+            className="h-8 px-2 text-blue-600 cursor-pointer"
+          >
+            View <ArrowUpRight className="ml-1 h-3 w-3" />
+          </Button>
+        </div>
+
+        {/* TOGGLE BUTTON */}
+        <Button
+          onClick={() =>
+            setActiveMenuId(
+              activeMenuId === blog.id ? null : blog.id
+            )
+          }
+          className="mt-2 mb-2 bg-gray-500/20 hover:bg-gray-500/30 text-black"
+        >
+          {activeMenuId === blog.id ? (
+            <MoveUpIcon size={18} />
+          ) : (
+            <MoveDown size={18} />
+          )}
+        </Button>
+
+        {/* ACTION MENU */}
+        <div
+          className={`overflow-hidden transition-all duration-300 ease-in-out
+          ${activeMenuId === blog.id ? "max-h-20 mt-2" : "max-h-0"}`}
+        >
+          <div
+            className={`flex justify-center gap-2 transition-all duration-300
+            ${
+              activeMenuId === blog.id
+                ? "opacity-100 translate-y-0"
+                : "opacity-0 -translate-y-2"
+            }`}
+          >
+            <Button 
+            onClick={handleDelete}
+            className="w-1/2 cursor-pointer">
+              <Trash size={18} />
+            </Button>
+
+            <Button 
+            onClick={() => setIsEditOpen(prev => !prev)}
+            className="w-1/2 cursor-pointer">
+              <Edit size={18} />
+            </Button>
+          </div>
+
+          {isEditOpen && (
+            //  <div className="flex-1 space-y-5 overflow-y-auto pr-2">
+            <div className="fixed w-screen inset-0 z-50 flex items-center justify-center backdrop-blur-sm bg-black/50 p-4">
+              <Form {...editForm}>
+                <form
+                  onSubmit={editForm.handleSubmit(handleEdit)}
+                  className="w-full max-w-md sm:max-w-md bg-white rounded-lg shadow-2xl p-4 sm:p-6 space-y-5"
+                >
+                  <div className='flex justify-between items-center'>
+                    <h2 className="text-black text-center text-lg sm:text-xl font-semibold">
+                        Update Blog
+                    </h2>
+                    <span 
+                    onClick={() => {setIsEditOpen(false); setActiveMenuId(null);}}
+                    className='cursor-pointer'><X size={18}/></span>
                   </div>
-                ))}
-              </div>
+
+                  <FormField
+                    control={editForm.control}
+                    name="title"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-sm font-medium">
+                          Community Name
+                        </FormLabel>
+                        <FormControl>
+                          <div className="relative">
+                            <Users className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                            <Input
+                              placeholder=""
+                              className="pl-9 text-sm sm:text-base"
+                              {...field}
+                            />
+                          </div>
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={editForm.control}
+                    name="description"
+                    render={({ field }) => (
+                      <FormItem> 
+                        <FormLabel className="text-sm font-medium">
+                          Description
+                        </FormLabel>
+                        <FormControl>
+                          <div className="relative">
+                            <Info className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                            <Textarea
+                              placeholder="What's this group about?"
+                              className="pl-9 text-sm sm:text-base"
+                              {...field}
+                            />
+                          </div>
+                        </FormControl>
+                        <FormDescription className="text-xs">
+                          Keep it short and catchy.
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <Button
+                    type="submit"
+                    className="w-full font-semibold shadow-lg hover:shadow-primary/20 transition-all active:scale-95 text-sm sm:text-base cursor-pointer"
+                    disabled={editForm.formState.isSubmitting}
+                  >
+                    {editForm.formState.isSubmitting ? (
+                      <>
+                        <Loader2 className='animate-spin'/>
+                        Updating...
+                      </>
+                    ) : (
+                      "Update Blog"
+                    )}
+                  </Button>
+                </form>
+              </Form>
+            {/* </div> */}
+          </div>
+          )}
+        </div>
+      </div>
+    </div>
+  ))}
+</div>
             ) : (
               <div className="h-70 flex items-center justify-center py-20 bg-white rounded-xl border border-dashed border-slate-300 mt-28">
                 <p className="text-slate-500">No blogs exist in this community yet.</p>
@@ -253,7 +531,9 @@ const Blog = () => {
           onClick={() => setIsOpen(false)}
         />
       )}
+      {/* <Outlet/> */}
     </div>
+    ))
   );
 };
 

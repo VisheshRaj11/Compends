@@ -135,6 +135,9 @@ useEffect(() => {
     toast.success("Project created successfully");
     setIsModalOpen(false);
     form.reset();
+    setTimeout(() => {
+      navigate(0);
+    },3000)
     // Optional: Refresh your project list here if not using real-time
   } catch (err) {
     console.error("Supabase Insertion Error:", err);
@@ -143,7 +146,7 @@ useEffect(() => {
 };
 
   return (
-    <div className="relative min-h-screen w-full bg-white bg-[radial-gradient(#000000_1px,transparent_1px)] [background-size:26px_26px] p-6 md:p-10">
+    <div className="relative min-h-screen w-full bg-white bg-[radial-gradient(#000000_1px,transparent_1px)] [background-size:26px_26px] p-6 md:p-10 rounded-2xl">
       
       {/* Header Section */}
       <div className="mb-10 relative">

@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Button } from '../../components/ui/button';
-import { CirclePlus, MoreVertical, MessageSquare, Plus,ChevronRight, ChevronLeft } from 'lucide-react';
+import { CirclePlus, MoreVertical, MessageSquare, Plus,ChevronRight, ChevronLeft, Trash, UserMinus } from 'lucide-react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import AddUser from './AddUser';
 import { useSupabase } from '../../supabase/client';
@@ -27,6 +27,9 @@ const Chat = () => {
   const {user} = useUser();
   const [isPanelOpen, setIsPanelOpen] = useState(false);
   const navigate = useNavigate();
+  // const [userMenuButton, setUserMenuButton] = useState(false);
+  const [activeUserId, setActiveUserId] = useState(null);
+  const [userMenu, setUserMenu] = useState(false);
 
   const handleOverlay = (e) => {
     if (e.target === e.currentTarget) setAddMemberOpen(false);
@@ -42,7 +45,6 @@ const Chat = () => {
       alert("User not synced yet. Please wait a second and try again.");
     return;
   }
-
 
   try {
     const file = fileRef.current?.files?.[0];
@@ -81,12 +83,27 @@ const Chat = () => {
   }
 };
 
-
+  const removeUser = async() => {
+     try {
+      const id = activeUserId;
+      const {error} = await supabase.from('community_members')
+      .delete().eq('user_id', id).eq('community_id',communityId)
+      if(error) {
+        throw new Error(error);
+      }
+      toast.success("Member remove successfully");
+      setActiveUserId(null);
+      setTimeout(() => {
+            navigate(0);
+      },2000)
+     } catch (error) {
+        console.log('Failed to remove the user: ', error);
+     }
+  }
 // Fetch userId:
   useEffect(() => {
      const fetchSupabaseUser = async () => {
       if (!user?.id) return;
-
       const { data, error } = await supabase
         .from("users")
         .select("id")
@@ -135,9 +152,54 @@ const Chat = () => {
     if (communityId) fetchCommunityMembers();
   }, [communityId, supabase]);
 
+  //Remove User Channel: 
+useEffect(() => {
+  if (!communityId) return;
+
+  const channel = supabase
+    .channel(`community-members-${communityId}`)
+    .on(
+      'postgres_changes',
+      {
+        event: '*', // 👈 listen to ALL events
+        schema: 'public',
+        table: 'community_members',
+        filter: `community_id=eq.${communityId}`
+      },
+      async (payload) => {
+        console.log("REALTIME EVENT:", payload);
+
+        if (payload.eventType === "INSERT") {
+          // fetch new user details (because payload only has IDs)
+          const { data } = await supabase
+            .from("users")
+            .select("*")
+            .eq("id", payload.new.user_id)
+            .single();
+
+          if (data) {
+            setCommunityMembers(prev => [...prev, data[0]]);
+          }
+        }
+
+        if (payload.eventType === "DELETE") {
+          console.log("Deleted User")
+          setCommunityMembers(prev => prev.filter((m) => m.user_id !== payload.old.user_id))
+          
+        }
+      }
+    )
+    .subscribe((status) => {
+      console.log("CHANNEL STATUS:", status);
+    });
+
+  return () => {
+    supabase.removeChannel(channel);
+  };
+}, [communityId]);
 
   return (
-    <div className="flex h-screen w-full bg-background overflow-hidden">
+    <div className="flex h-screen w-full bg-background overflow-hidden rounded-2xl">
       <AnimatePresence>
         {!isPanelOpen && (
           <motion.button
@@ -195,12 +257,17 @@ const Chat = () => {
               )}
 
               {/* Members List */}
-              <ScrollArea className="flex-1">
-                <div className="p-3 space-y-1">
+              <ScrollArea 
+              // onClick={() => setUserMenu(false)}
+              className="flex-1">
+                <div 
+                className="p-3 space-y-1">
                   {communityMembers.length > 0 ? (
                     communityMembers.map((member) => (
                       <div 
                         key={member.id}
+                        onMouseEnter={() => {setUserMenu(true); setActiveUserId(member.id)}}
+                        onMouseLeave={() => {setUserMenu(false);}}
                         onClick={() => setActiveChat(member)}
                         className={`flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-all duration-200 group ${
                           activeChat?.id === member.id ? "bg-primary/10 shadow-sm" : "hover:bg-accent"
@@ -216,6 +283,7 @@ const Chat = () => {
                             </AvatarFallback>
                           </Avatar>
                           <div className="absolute bottom-0 right-0 h-3 w-3 bg-green-500 border-2 border-white rounded-full"></div>
+                          {/* <Button></Button> */}
                         </div>
 
                         <div className="flex-1 min-w-0">
@@ -231,6 +299,16 @@ const Chat = () => {
                             {member.about || "Hey there! I am using the community."}
                           </p>
                         </div>
+                        {
+                          userMenu &&
+                          activeUserId === member.id && 
+                            <div>
+                              <Button
+                              onClick={removeUser}
+                              className={'cursor-pointer z-10'}
+                              ><UserMinus size={18}/></Button>
+                            </div>
+                        }
                       </div>
                     ))
                   ) : (
@@ -263,9 +341,6 @@ const Chat = () => {
           ) : (
             <div></div>
           )}
-          <Button variant="ghost" size="icon" className="rounded-full">
-             <MoreVertical size={20} className="text-muted-foreground" />
-          </Button>
         </header>
 
         {/* Message Feed */}

@@ -403,7 +403,7 @@ useEffect(() => {
   };
 
   return (
-    <div className="h-screen w-screen bg-[#f5f5f7] overflow-hidden relative">
+    <div className="h-screen w-screen bg-[#f5f5f7] overflow-hidden relative rounded-xl">
       {/* ===== MAIN CONTENT (BLURRED WHEN MODAL OPEN) ===== */}
       <div
         className={`h-full w-full flex transition-all duration-200 ${

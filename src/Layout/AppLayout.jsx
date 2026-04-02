@@ -3,7 +3,7 @@ import { Navigate, NavLink, Outlet, useLocation } from 'react-router-dom';
 import LandingPage from '../pages/LandingPage/LandingPage';
 import Sidebar from '../components/CommunityPage/Sidebar';
 import ModernBackground from '../components/LandingPage/ModernBackground';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useEditUserContext } from '../context/EditContext';
 import { ChartArea, Flame, FolderOpenDot, Image, MessageCircle, PenBox, Rabbit, Trophy, Video } from 'lucide-react';
 import { useDispatch, useSelector } from 'react-redux';
@@ -29,7 +29,6 @@ const AppLayout = () => {
   // Inside Sidebar.js mapping
   const {isEditUser} = useEditUserContext();
   const currentCommunityId = useSelector((state) => state.currentCommunity.id);
-
   // let idFromUrl = null; 
   // const activeId = currentCommunityId || idFromUrl;
 
@@ -106,15 +105,21 @@ const AppLayout = () => {
                   const pathSegments = location.pathname.split('/');
                   const idFromUrl = pathSegments[pathSegments.length - 1]; 
                   const activeId = currentCommunityId || idFromUrl;
+                  const hasCommunity = !!currentCommunityId;
                   return (
                     <NavLink
                     key={index}
-                    to={currentCommunityId ? `/community/${nav.route}/${activeId}` : "#"}
-                    className={({ isActive }) => `
+                    to={hasCommunity ? `/community/${nav.route}/${activeId}` : "#"}
+                    end={false}
+                    className={({isActive }) => `
                       flex items-center gap-2 px-3 py-1.5 rounded-full transition-all duration-200 text-sm font-medium
-                      ${isActive 
-                        ? 'bg-black text-white shadow-sm' 
-                        : 'text-slate-500 hover:bg-slate-100 hover:text-slate-900'}
+                     ${
+                        !hasCommunity
+                          ? "hidden" 
+                          : isActive
+                          ? "bg-black text-white shadow-sm"
+                          : "text-slate-500 hover:bg-slate-100 hover:text-slate-900"
+                      }
                     `}
                   >
                     {nav.icon}
@@ -126,8 +131,8 @@ const AppLayout = () => {
             </header>
 
             {/* Page Content */}
-            <section className='p-2 flex-1 overflow-y-auto'>
-              <div className="max-w-8xl mx-auto bg-white rounded-2xl shadow-sm border border-slate-200 min-h-full">
+            <section className='p-2 flex-1 overflow-y-auto '>
+              <div className="max-w-8xl mx-auto bg-white rounded-2xl shadow-sm border border-slate-200 min-h-full ">
                 <Outlet />
               </div>
             </section>

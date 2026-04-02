@@ -6,6 +6,7 @@ import { Card, CardContent } from '../../components/ui/card';
 import { ScrollArea } from '../../components/ui/scroll-area';
 import { Avatar, AvatarFallback, AvatarImage } from '../../components/ui/avatar';
 import { Plus, Search, UserPlus, Loader2, MoveLeft } from 'lucide-react';
+import { toast } from 'react-toastify';
 
 const AddUser = ({communityId, setAddMemberOpen}) => {
   const [searchUser, setSearchUser] = useState('');
@@ -38,7 +39,26 @@ const AddUser = ({communityId, setAddMemberOpen}) => {
       }
     }
     if(communityId) fetchCommunityMembers();
-  },[communityId, supabase])
+  },[communityId, supabase]);
+
+  useEffect(() => {
+    const channel = supabase.channel('add-user-channel')
+    .on('postgres_changes', {
+      event:'*',
+      schema:'public',
+      table:'community_members',
+      filter:`community_id=eq.${communityId}`
+    },
+  (payload) => {
+    if(payload.eventType === "INSERT") {
+      setMemberIds(prev => [...prev, payload.new.user_id])
+    }
+  }).subscribe((status) => {
+      console.log("Channel status:", status);
+  });
+
+  return () => supabase.removeChannel(channel);
+  },[communityId])
   
   const filteredUsers = useMemo(() => {
   const query = searchUser.toLowerCase();
@@ -66,10 +86,9 @@ const AddUser = ({communityId, setAddMemberOpen}) => {
       return;
     }
 
-    alert("User added to community");
+    toast.success("User added to community");
     setLoading(false);
   }
-
 
   return (
     <div className="max-w-md mx-auto p-6 space-y-6 ">

@@ -30,7 +30,7 @@ const VideoPlayer = () => {
   };
 
   return (
-    <div className="flex flex-col min-h-screen  w-full bg-gradient-to-br from-white to-slate-100 bg-[radial-gradient(#2ec972_1px,transparent_1px)] [background-size:26px_26px] text-foreground">
+    <div className="flex flex-col min-h-screen  w-full bg-gradient-to-br from-white to-slate-100 bg-[radial-gradient(#2ec972_1px,transparent_1px)] [background-size:26px_26px] text-foreground p-6 md:p-10 rounded-2xl">
       
       {/* --- Sticky Search Bar --- */}
       <nav className="z-30 sticky top-0 bg-background/95 backdrop-blur-md border-b p-3 md:p-4">

@@ -30,7 +30,7 @@ const Sidebar = () => {
   const [activeId, setActiveId] = useState(null);
   const [isEditCommunity, setIsEditCommunity] = useState(false);
 
-  console.log(user);
+  // console.log(user);
   // const isThisCommunityActive = location.pathname.includes(community.id);
   const formSchema = z.object({
     communityName: z.string().min(3, "Community name must be at least 3 characters"),
@@ -49,7 +49,7 @@ const Sidebar = () => {
     const fetchCommunities = async () => {
       const { error, data } = await supabase.from("communities").select('*');
       if (error) return;
-      console.log(data);
+      // console.log(data);
       setCommunities(data);
     }
     fetchCommunities()
@@ -313,8 +313,10 @@ useEffect(() => {
       }
 
       {/* Navigation / Communities List */}
-      <div className={`flex-1 px-3 overflow-y-auto`}>
-        <div className="flex items-center justify-between px-3 mb-3">
+      <div 
+      className={`flex-1 px-3 overflow-y-auto`}>
+        <div 
+        className="flex items-center justify-between px-3 mb-3 ">
           <h3 className="text-[11px] uppercase tracking-widest text-slate-500 font-bold">
             Your Communities
           </h3>
@@ -323,7 +325,9 @@ useEffect(() => {
           </span>
         </div>
 
-        <div className="space-y-1">
+        <div 
+          // onClick={() => {setOpenMenu(false); setActiveId(null)}}
+        className="space-y-1 ">
           {communities.map((community) => {
             // Check if the community ID exists anywhere in the current URL path
             const isThisCommunityActive = location.pathname.includes(community.id);
@@ -336,10 +340,10 @@ useEffect(() => {
                 className={`
                   group flex items-center justify-between p-2 rounded-lg transition-all duration-200
                   ${isThisCommunityActive 
-                    ? 'bg-indigo-50 text-indigo-700 shadow-sm ring-1 ring-indigo-100' 
-                    : 'text-slate-600 hover:bg-white hover:shadow-sm hover:text-slate-900'}
-                `}
-              >
+                  ? 'bg-indigo-50 text-indigo-700 shadow-sm ring-1 ring-indigo-100' 
+                  : 'text-slate-600 hover:bg-white hover:shadow-sm hover:text-slate-900'}
+                  `}
+                  >
                 <div 
                 // onClick={overlay}
                 className="flex items-center gap-3 min-w-0 relative">
@@ -382,7 +386,7 @@ useEffect(() => {
           })}
 
           {communities.length === 0 && (
-            <div className="text-center py-8">
+            <div className="text-center py-8 ">
               <p className="text-xs text-slate-400 italic">No communities joined yet</p>
             </div>
           )}
