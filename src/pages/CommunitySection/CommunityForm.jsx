@@ -56,13 +56,13 @@ const CommunityForm = () => {
         about: values.about.trim(),
         size: values.size,
         owner_id: user.id
-    });
+    }).select();
 
     if(error) {
       console.log("Supabse Error: "+error.message);
       return;
     }
-    // console.log(data?.id);
+    console.log(data);
     toast.success("Community created successfully");
 
     setTimeout(() => {

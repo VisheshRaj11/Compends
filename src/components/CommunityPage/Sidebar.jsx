@@ -1,4 +1,4 @@
-import { UserButton, useUser } from '@clerk/clerk-react'
+import { UserButton, useUser, useClerk  } from '@clerk/clerk-react'
 import { shadesOfPurple } from '@clerk/themes';
 import React, { useEffect, useState } from 'react'
 import { Button } from '../ui/button';
@@ -29,9 +29,8 @@ const Sidebar = () => {
   const [openMenu, setOpenMenu] = useState(false);
   const [activeId, setActiveId] = useState(null);
   const [isEditCommunity, setIsEditCommunity] = useState(false);
+  // const [profileMenuOpen, setProfileMenuOpen] = useState(false);
 
-  // console.log(user);
-  // const isThisCommunityActive = location.pathname.includes(community.id);
   const formSchema = z.object({
     communityName: z.string().min(3, "Community name must be at least 3 characters"),
     about: z.string().min(4, "About must be at least 4 characters").max(50, "About must be within 50 characters"),
@@ -126,6 +125,7 @@ const Sidebar = () => {
   }
 };
 
+
 useEffect(() => {
   if(!activeId) return ;
   const channel = supabase
@@ -167,8 +167,16 @@ useEffect(() => {
               appearance={{
                 baseTheme: shadesOfPurple,
                 elements: { avatarBox: "w-10 h-10" }
-              }}
-            />
+              }}    
+            >
+              <UserButton.MenuItems>
+                 <UserButton.Action
+                      label="My Profile"
+                       labelIcon={<span><User size={15}/></span>}
+                      onClick={() => navigate(`/community/userProfile/${user?.id}`)}
+                    />
+              </UserButton.MenuItems>
+            </UserButton>
             <div className="flex flex-col min-w-0">
               <span className="text-sm font-semibold text-slate-900 truncate">
                 {user?.firstName} {user?.lastName}
@@ -176,15 +184,17 @@ useEffect(() => {
               <span className="text-[10px] font-bold uppercase tracking-wider text-indigo-600">Pro Member</span>
             </div>
           </div>
+
+          {/* ********
            <Button 
-            onClick={() => navigate(`/community/userProfile/${user?.id}`)}
+            onClick={() => setProfileMenuOpen(prev => !prev)}
             variant="ghost" 
             size="icon"
             className="h-8 w-8 rounded-full border-slate-200 bg-slate-100 hover:bg-slate-100 cursor-pointer"
-          >
+            >
             <User 
             size={16} className="text-slate-600" />
-          </Button>
+          </Button> */}
         </div>
       </div>
 
@@ -220,100 +230,101 @@ useEffect(() => {
 
       {
         isEditCommunity && (
-          <div className="fixed w-screen inset-0 z-50 flex items-center justify-center backdrop-blur-sm bg-black/50 p-4">
-  <Form {...form}>
-    <form
-      onSubmit={form.handleSubmit(onSubmit)}
-      className="w-full max-w-md sm:max-w-md bg-white rounded-lg shadow-2xl p-4 sm:p-6 space-y-5"
-    >
-      <div className='flex justify-between items-center'>
-        <h2 className="text-black text-center text-lg sm:text-xl font-semibold">
-             Update Community
-        </h2>
-        <span 
-        onClick={() => setIsEditCommunity(false)}
-        className='cursor-pointer'><X size={18}/></span>
-      </div>
-
-      <FormField
-        control={form.control}
-        name="communityName"
-        render={({ field }) => (
-          <FormItem>
-            <FormLabel className="text-sm font-medium">
-              Community Name
-            </FormLabel>
-            <FormControl>
-              <div className="relative">
-                <Users className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Tech Squad"
-                  className="pl-9 text-sm sm:text-base"
-                  {...field}
-                />
-              </div>
-            </FormControl>
-            <FormMessage />
-          </FormItem>
-        )}
-      />
-
-      <FormField
-        control={form.control}
-        name="about"
-        render={({ field }) => (
-          <FormItem> <Button 
-            onClick={() => navigate('userProfile')}
-            variant="ghost" 
-            size="icon"
-            className="h-8 w-8 rounded-full border-slate-200 bg-slate-100 hover:bg-slate-100 cursor-pointer"
+                <div className="fixed w-screen inset-0 z-50 flex items-center justify-center backdrop-blur-sm bg-black/50 p-4">
+        <Form {...form}>
+          <form
+            onSubmit={form.handleSubmit(onSubmit)}
+            className="w-full max-w-md sm:max-w-md bg-white rounded-lg shadow-2xl p-4 sm:p-6 space-y-5"
           >
-            <User 
-            size={16} className="text-slate-600" />
-          </Button>
-            <FormLabel className="text-sm font-medium">
-              Description
-            </FormLabel>
-            <FormControl>
-              <div className="relative">
-                <Info className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                <Textarea
-                  placeholder="What's this group about?"
-                  className="pl-9 text-sm sm:text-base"
-                  {...field}
-                />
-              </div>
-            </FormControl>
-            <FormDescription className="text-xs">
-              Keep it short and catchy.
-            </FormDescription>
-            <FormMessage />
-          </FormItem>
-        )}
-      />
+            <div className='flex justify-between items-center'>
+              <h2 className="text-black text-center text-lg sm:text-xl font-semibold">
+                  Update Community
+              </h2>
+              <span 
+              onClick={() => setIsEditCommunity(false)}
+              className='cursor-pointer'><X size={18}/></span>
+            </div>
 
-      <Button
-        type="submit"
-        className="w-full font-semibold shadow-lg hover:shadow-primary/20 transition-all active:scale-95 text-sm sm:text-base"
-        disabled={form.formState.isSubmitting}
-      >
-        {form.formState.isSubmitting ? (
-          <>
-            <Loader2 className='animate-spin'/>
-            Updating...
-          </>
-        ) : (
-          "Update Community"
-        )}
-      </Button>
-    </form>
-  </Form>
-</div>
+            <FormField
+              control={form.control}
+              name="communityName"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-sm font-medium">
+                    Community Name
+                  </FormLabel>
+                  <FormControl>
+                    <div className="relative">
+                      <Users className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        placeholder="Tech Squad"
+                        className="pl-9 text-sm sm:text-base"
+                        {...field}
+                      />
+                    </div>
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="about"
+              render={({ field }) => (
+                <FormItem> <Button 
+                  onClick={() => navigate('userProfile')}
+                  variant="ghost" 
+                  size="icon"
+                  className="h-8 w-8 rounded-full border-slate-200 bg-slate-100 hover:bg-slate-100 cursor-pointer"
+                >
+                  <User 
+                  size={16} className="text-slate-600" />
+                </Button>
+                  <FormLabel className="text-sm font-medium">
+                    Description
+                  </FormLabel>
+                  <FormControl>
+                    <div className="relative">
+                      <Info className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                      <Textarea
+                        placeholder="What's this group about?"
+                        className="pl-9 text-sm sm:text-base"
+                        {...field}
+                      />
+                    </div>
+                  </FormControl>
+                  <FormDescription className="text-xs">
+                    Keep it short and catchy.
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <Button
+              type="submit"
+              className="w-full font-semibold shadow-lg hover:shadow-primary/20 transition-all active:scale-95 text-sm sm:text-base"
+              disabled={form.formState.isSubmitting}
+            >
+              {form.formState.isSubmitting ? (
+                <>
+                  <Loader2 className='animate-spin'/>
+                  Updating...
+                </>
+              ) : (
+                "Update Community"
+              )}
+            </Button>
+          </form>
+        </Form>
+      </div>
         )
       }
 
       {/* Navigation / Communities List */}
       <div 
+      onClick={overlay}
       className={`flex-1 px-3 overflow-y-auto`}>
         <div 
         className="flex items-center justify-between px-3 mb-3 ">
@@ -324,19 +335,20 @@ useEffect(() => {
             {communities.length}
           </span>
         </div>
+        
 
         <div 
           // onClick={() => {setOpenMenu(false); setActiveId(null)}}
-        className="space-y-1 ">
+          className="space-y-1 ">
           {communities.map((community) => {
             // Check if the community ID exists anywhere in the current URL path
             const isThisCommunityActive = location.pathname.includes(community.id);
 
             return (
               <NavLink
-                key={community.id}
-                onClick={() => { dispatch(setCommunity(community.id)); }}
-                to={`/community/chat/${community.id}`}
+              key={community.id}
+              onClick={() => { dispatch(setCommunity(community.id));}}
+              to={`/community/chat/${community.id}`}
                 className={`
                   group flex items-center justify-between p-2 rounded-lg transition-all duration-200
                   ${isThisCommunityActive 
@@ -345,10 +357,9 @@ useEffect(() => {
                   `}
                   >
                 <div 
-                // onClick={overlay}
-                className="flex items-center gap-3 min-w-0 relative">
-                    {activeId === community.id && openMenu && (
-                    <ul className=' flex flex-col gap-1 border absolute bg-white top-0 -right-20 z-10 py-3 px-2 rounded-xl'>
+                className="flex items-center  gap-3 min-w-0 relative">
+                    {currentCommunityInfo?.owner_id === user.id &&  activeId === community.id && openMenu && (
+                      <ul className=' flex flex-col gap-1 border absolute bg-white top-5 -right-20 z-10 py-3 px-2 rounded-xl'>
                       <li 
                       onClick={() => setIsEditCommunity(prev => !prev)}
                       className='flex items-center gap-2 cursor-pointer bg-black text-white hover:bg-gray-300/10 hover:text-indigo-700 hover:border hover:border-gray-400 rounded px-5 py-2'>
@@ -366,9 +377,9 @@ useEffect(() => {
                   <div className={`
                     p-2 rounded-md transition-colors
                     ${isThisCommunityActive 
-                      ? 'bg-indigo-100 text-indigo-600' 
-                      : 'bg-slate-100 text-slate-400 group-hover:bg-indigo-50'}
-                  `}>
+                    ? 'bg-indigo-100 text-indigo-600' 
+                    : 'bg-slate-100 text-slate-400 group-hover:bg-indigo-50'}
+                    `}>
                     <Users size={16} />
                   </div>
                   <span className="text-sm font-medium truncate">

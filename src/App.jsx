@@ -15,6 +15,7 @@ import VideoPlayer from "./components/CommunityPage/VideoPlayer"
 import UserProfile from "./components/CommunityPage/UserProfile"
 import ViewBlog from "./components/CommunityPage/ViewBlog"
 
+
 function App() {
   const router = createBrowserRouter([
     {
@@ -25,7 +26,7 @@ function App() {
           element:<LandingPage/>
         },
         {
-          path:'/community',
+          path:'community',
           element: <CommunitySection/>,
           children:[{
             path:'create-community',

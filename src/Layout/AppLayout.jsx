@@ -1,5 +1,5 @@
 import { useUser } from '@clerk/clerk-react';
-import { Navigate, NavLink, Outlet, useLocation } from 'react-router-dom';
+import { Navigate, NavLink, Outlet, useLocation, useNavigate  } from 'react-router-dom';
 import LandingPage from '../pages/LandingPage/LandingPage';
 import Sidebar from '../components/CommunityPage/Sidebar';
 import ModernBackground from '../components/LandingPage/ModernBackground';
@@ -11,6 +11,7 @@ import { setCommunity } from '@/store/CommunitySlice';
 import {motion} from "framer-motion";
 import { ToastContainer } from 'react-toastify';
 import "react-toastify/dist/ReactToastify.css";
+
 
 const navs = [
 { icon: <MessageCircle size={20} />, name: "Chat", route: "chat" },
@@ -26,9 +27,11 @@ const AppLayout = () => {
   const dispatch = useDispatch();
   const { isSignedIn, isLoaded } = useUser();
   const location = useLocation();
+  const navigate = useNavigate();
   // Inside Sidebar.js mapping
   const {isEditUser} = useEditUserContext();
   const currentCommunityId = useSelector((state) => state.currentCommunity.id);
+  // const isCallbackPage = location.pathname.includes('sso-callback');
   // let idFromUrl = null; 
   // const activeId = currentCommunityId || idFromUrl;
 

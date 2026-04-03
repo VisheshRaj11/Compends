@@ -129,7 +129,7 @@ const Blog = () => {
       if(error) throw new Error(error);
       
       setAllBlogs((prev) => prev.map((blog) => 
-        blog.id === currentId? {...blog, title: values.title, content: values.description[]} : blog
+        blog.id === currentId? {...blog, title: values.title, content: values.description} : blog
       ))
 
       editForm.reset();

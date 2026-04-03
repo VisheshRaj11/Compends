@@ -15,10 +15,10 @@ import { toast } from 'react-toastify';
 
 const Chat = () => {
   const { id: communityId } = useParams();
-  const location = useLocation();
+  // const location = useLocation();
   const [addMemberOpen, setAddMemberOpen] = useState(false);
   const [communityMembers, setCommunityMembers] = useState([]);
-  const [communtiyDetails, setCommunityDetails] = useState({});
+  const [communityDetails, setCommunityDetails] = useState({});
   const [activeChat, setActiveChat] = useState(null); // Track selected user
   const supabase = useSupabase();
   const [messageText, setMessageText] = useState('');
@@ -132,7 +132,7 @@ const Chat = () => {
     const fetchCommunityMembers = async () => {
       const { error, data } = await supabase
         .from("community_members")
-        .select(`role, users(id, name, email, about, avatar_url,clerk_id)`)
+        .select(`role, users(id, name, email, about, avatar_url, clerk_id)`)
         .eq('community_id', communityId);
 
       if (error) {
@@ -142,16 +142,20 @@ const Chat = () => {
       
       const formattedMembers = data.map((row) => ({
         ...row.users,
-        role: row.role
+        role: row.role,
+        // user_id: row.user_id
       }));
       
       setCommunityMembers(formattedMembers);
+      
       if (formattedMembers.length > 0) setActiveChat(formattedMembers[0]);
     };
 
     if (communityId) fetchCommunityMembers();
   }, [communityId, supabase]);
 
+
+  // console.log(communityDetails.owner_id)
   //Remove User Channel: 
 useEffect(() => {
   if (!communityId) return;
@@ -289,9 +293,10 @@ useEffect(() => {
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center justify-between">
                             <p className="font-semibold text-sm truncate">{member.name}</p>
-                            {member.role === 'admin' && (
+                            {communityDetails?.owner_id === member?.clerk_id && (
                               <Badge variant="secondary" className="text-[10px] h-4 px-1 leading-none uppercase tracking-wider">
                                 Admin
+                                {console.log(communityDetails.owner_id)}
                               </Badge>
                             )}
                           </div>
@@ -299,7 +304,7 @@ useEffect(() => {
                             {member.about || "Hey there! I am using the community."}
                           </p>
                         </div>
-                        {
+                        { communityDetails?.owner_id === user?.id &&
                           userMenu &&
                           activeUserId === member.id && 
                             <div>
@@ -328,14 +333,14 @@ useEffect(() => {
       <div className="flex flex-col flex-1 h-full bg-gradient-to-br from-white to-slate-100 bg-[radial-gradient(#2ec972_1px,transparent_1px)] [background-size:26px_26px]">
         {/* Chat Header */}
         <header className="h-20 border-b flex items-center justify-between px-6 bg-background/50 backdrop-blur-md">
-          {communtiyDetails?.name ? (
+          {communityDetails?.name ? (
             <div className="flex items-center gap-3">
               <Avatar className="h-10 w-10 border">
-                <AvatarFallback>{communtiyDetails.name?.charAt(0)}</AvatarFallback>
+                <AvatarFallback>{communityDetails.name?.charAt(0)}</AvatarFallback>
               </Avatar>
               <div>
-                <p className="font-bold text-sm leading-none">{communtiyDetails.name}</p>
-                <p className="text-[11px] text-green-600 font-medium"><span className='text-black'>About</span>: {communtiyDetails.about}</p>
+                <p className="font-bold text-sm leading-none">{communityDetails.name}</p>
+                <p className="text-[11px] text-green-600 font-medium"><span className='text-black'>About</span>: {communityDetails.about}</p>
               </div>
             </div>
           ) : (
