@@ -8,7 +8,7 @@ export const createSupabaseClient = (getToken) => {
     global: {
       fetch: async (url, options = {}) => {
         const token = await getToken({ template: "supabase" });
-
+        // console.log(token)
         return fetch(url, {
           ...options,
           headers: {

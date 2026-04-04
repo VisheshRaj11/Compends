@@ -31,13 +31,14 @@ import {
   TrendingUp,
   Pencil
 } from "lucide-react";
-import { useUser } from '@clerk/clerk-react';
+import { useAuth, useUser } from '@clerk/clerk-react';
 import { useSupabase } from '@/supabase/client';
 
 // Recharts imports
 import { PieChart as RePieChart, Pie, Cell, ResponsiveContainer, Tooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid, AreaChart, Area } from 'recharts';
 import { useParams, useSearchParams } from 'react-router-dom';
 import EditUserForm from './EditUserForm';
+import { extractUsername } from '@/utils/ExtractUsername';
 
 const UserProfile = () => {
   const { user } = useUser();
@@ -46,6 +47,7 @@ const UserProfile = () => {
   const [leetCodeInfo, setLeetCodeInfo] = useState(null);
   const [githubInfo, setGithubInfo] = useState(null);
   const [editUser, setIsEditUser] = useState(false);
+   const {getToken} = useAuth();
   // const [searchParams] = useParams();
   const {id} = useParams();
   console.log(id);
@@ -56,12 +58,124 @@ const UserProfile = () => {
         const { data, error } = await supabase.from('users').select('*').eq('clerk_id', id);
         if (error) throw new Error(error);
         setUserInfo(data[0]);
+        console.log(data);
       } catch (error) {
         console.log(error);
       }
     };
     fetchUserInfo();
   }, [user, supabase]);
+
+  useEffect(() => {
+    if (!user?.id || !userInfo?.leetcode) return;
+
+    const cronJob_Leetcode = async() => {
+      
+      const leetcodeUserName = extractUsername(userInfo?.leetcode);
+
+      // console.log(leetcodeUserName)
+      
+      if (!leetcodeUserName) {
+        console.warn("Could not extract leetcode username, skipping");
+        return; 
+      }
+      
+      const token = await getToken({ template: "supabase" });
+
+      // console.log(token)
+
+      const { data, error } = await supabase.functions.invoke('fetch-leetcode_stats', {
+        body: { username: leetcodeUserName },
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+    });
+
+
+    // if (error) console.error("❌ Leetcode sync failed:", error);
+    // else console.log("✅ Leetcode stats synced:", data);
+    }
+    cronJob_Leetcode();
+  },[user?.id, userInfo?.leetcode]);
+
+  useEffect(() => {
+    if (!user?.id || !userInfo?.github) return;
+
+    const cronJob_Github = async() => {
+      
+      const githubUserName = extractUsername(userInfo?.github);
+
+      // console.log(leetcodeUserName)
+      
+      if (!githubUserName) {
+        console.warn("Could not extract github username, skipping");
+        return; 
+      }
+      
+      const token = await getToken({ template: "supabase" });
+
+      // console.log(token)
+
+      const { data, error } = await supabase.functions.invoke('fetch-github_stats', {
+        body: { username: githubUserName },
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+    });
+
+
+    if (error) console.error(" Github sync failed:", error);
+    else console.log("Github stats synced:", data);
+    }
+    cronJob_Github();
+  },[user?.id, userInfo?.github]);
+
+  // useEffect(() => {
+  //     if (!userData?.leetcode) return;
+  
+  //     const myLeetcodeStats = async() => {
+  //       setLoading(true);
+  //       setError(null);
+  
+  //       const leetcodeUserName = extractUsername(userData?.leetcode);
+  //       if(!leetcodeUserName) {
+  //         setError("Invalid LeetCode profile URL");
+  //         setLoading(false);
+  //         return;
+  //       }
+        
+  //       try {
+  //         const token = await getToken({ template: "supabase" });
+  //         // console.log(token?.split(".").length);
+  //         // console.log(leetcodeUserName);
+  
+  //          const { data:leet, error } = await supabase.functions.invoke(
+  //           'fetch-leetcode_stats',
+  //           {
+  //             body: { username: leetcodeUserName },
+  //             headers: {
+  //               Authorization: `Bearer ${token}`,
+  //             },
+  //           }
+  //         );
+  
+  //          if (error) {
+  //           console.error("Edge function error:", error);
+  //           setError(error.message);
+  //         } else {
+  //           // console.log("LeetCode stats:", leet);
+  //           setLeetcodeStats(leet.data);
+  //           // Optionally update your local state or global store with the stats
+  //         }
+  //       } catch (error) {
+  //          console.error("Unexpected error:", error);
+  //         // setError("Failed to fetch LeetCode stats.");
+  //       } finally {
+  //         //  setLoading(false);
+  //       }
+  //     }
+  //     myLeetcodeStats();
+  //   },[supabase,getToken, userData]);
 
   useEffect(() => {
     const fetchLeetUsers = async () => {
@@ -148,11 +262,7 @@ const UserProfile = () => {
   const handleOverlay = (e) => {
     if (e.target === e.currentTarget) setIsEditUser(false);
   };
-  // Calculate solved percentage
-  // const totalSolved = leetCodeInfo?.solved || 0;
-  // const totalProblems = totalSolved + (leetCodeInfo?.easy || 0) + (leetCodeInfo?.medium || 0) + (leetCodeInfo?.hard || 0); // This is just a placeholder; ideally you'd know total problems per platform. For now we use solved as total.
-  // // Actually totalProblems is not known, so we skip progress for now.
-
+ 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-gray-100 p-2">
       <div className="max-w-9xl mx-auto bg-purple-950/5 rounded-b-2xl px-4 sm:px-6 lg:px-8 py-8 sm:py-12">

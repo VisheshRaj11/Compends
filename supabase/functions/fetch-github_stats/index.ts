@@ -90,6 +90,7 @@ serve(async (req) => {
     }
 
     const json = await graphqlRes.json();
+    
     if (json.errors) {
       throw new Error(`GraphQL errors: ${JSON.stringify(json.errors)}`);
     }

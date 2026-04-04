@@ -11,6 +11,7 @@ import { setCommunity } from '@/store/CommunitySlice';
 import {motion} from "framer-motion";
 import { ToastContainer } from 'react-toastify';
 import "react-toastify/dist/ReactToastify.css";
+import { useSupabase } from '@/supabase/client';
 
 
 const navs = [
@@ -28,6 +29,8 @@ const AppLayout = () => {
   const { isSignedIn, isLoaded } = useUser();
   const location = useLocation();
   const navigate = useNavigate();
+  const {user} = useUser();
+  const supabase = useSupabase();
   // Inside Sidebar.js mapping
   const {isEditUser} = useEditUserContext();
   const currentCommunityId = useSelector((state) => state.currentCommunity.id);
@@ -43,6 +46,163 @@ const AppLayout = () => {
     dispatch(setCommunity(idFromUrl));
   }
   }, [location.pathname, dispatch])
+
+const syncUser = async (clerkUser) => {
+  const email = clerkUser?.primaryEmailAddress?.emailAddress;
+  const clerkId = clerkUser?.id;
+
+  if (!email || !clerkId) {
+    console.warn(" Skipping sync: missing email or clerkId");
+    return;
+  }
+
+  try {
+    const { data: existingData, error:fetchError } = await supabase
+      .from('users')
+      .select('*').eq('email', email).maybeSingle();
+
+    
+    if (fetchError) {
+      console.error("❌ Fetch Error:", fetchError.message);
+      return;
+    } 
+
+    if(existingData && existingData?.clerk_id !== clerkId) {
+      const {error: updateError, data, count} = await supabase
+      .from('users').update({
+        clerk_id:clerkId,
+        avatar_url: clerkUser.imageUrl,
+        name: clerkUser.fullName || existingData.name,
+      }).eq('email', email).select();
+
+      console.log("Update result:", { data, count, updateError });
+
+       if (updateError) {
+        console.error("❌ Update Error:", updateError.message);
+      } else {
+        console.log("✅ clerk_id updated successfully");
+      }
+      return;
+    }
+
+    if (!existingData) {
+      const { error: insertError } = await supabase
+        .from('users')
+        .insert({
+          email,
+          clerk_id: clerkId,
+          name: clerkUser.fullName || "Anonymous",
+          avatar_url: clerkUser.imageUrl,
+          linkedin: "",
+          leetcode: "",
+        });
+
+      if (insertError) {
+        console.error("❌ Insert Error:", insertError.message);
+      } else {
+        console.log("✅ New user inserted");
+      }
+    }
+
+      if (existingData && existingData.clerk_id === clerkId) {
+      console.log("✅ User already in sync, skipping");
+    }
+
+
+  } catch (err) {
+    console.error("Unexpected sync error:", err);
+  }
+};
+
+// Pass user directly to avoid stale closure
+useEffect(() => {
+  if (isLoaded && isSignedIn && user?.id && user?.primaryEmailAddress) {
+    syncUser(user);
+  }
+}, [isLoaded, isSignedIn, user?.id]);
+
+//  const syncUser = async () => {
+//   // Ensure we have all necessary Clerk data before proceeding
+//   // const email = user.primaryEmailAddress?.emailAddress;
+//   // if (!email || !user.id) return;
+
+//   // try {
+//   //   // 1. Try to fetch the user by clerk_id (more reliable than email)
+//   //   const { data, error } = await supabase
+//   //     .from('users')
+//   //     .select('*')
+//   //     .eq('clerk_id', user.id)
+//   //     .maybeSingle(); // maybeSingle doesn't throw an error if no row is found
+
+//   //   if (error) {
+//   //     console.error("Supabase Fetch Error:", error.message);
+//   //     return;
+//   //   }
+
+//   //   // 2. If user doesn't exist, Insert them
+//   //   if (!data) {
+//   //     console.log("User not found, creating new record...");
+//   //     const { error: insertError } = await supabase
+//   //       .from('users')
+//   //       .insert({
+//   //         clerk_id: user.id,
+//   //         email: email,
+//   //         name: user.fullName || "Anonymous",
+//   //         avatar_url: user.imageUrl,
+//   //       });
+
+//   //     if (insertError) {
+//   //       console.error("Insert error:", insertError.message);
+//   //     } else {
+//   //       console.log("User successfully synced!");
+//   //     }
+//   //   } else {
+//   //     // 3. Optional: Sync name or avatar if they changed in Clerk
+//   //     if (data.avatar_url !== user.imageUrl || data.name !== user.fullName) {
+//   //       await supabase
+//   //         .from('users')
+//   //         .update({ 
+//   //           avatar_url: user.imageUrl, 
+//   //           name: user.fullName 
+//   //         })
+//   //         .eq('clerk_id', user.id);
+//   //     }
+//   //   }
+//   // } catch (err) {
+//   //   console.error("Unexpected error during sync:", err);
+//   // }
+//   const email = user?.primaryEmailAddress?.emailAddress;
+//   const clerkId = user?.id;
+
+//   if (!email || !clerkId) return;
+
+//   try {
+//     const { data, error } = await supabase
+//       .from('users')
+//       .upsert({
+//         email: email,        // The unique anchor
+//         clerk_id: clerkId,   // The new ID to update/insert
+//         name: user.fullName,
+//         avatar_url: user.imageUrl,
+//       }, { onConflict: 'email' }) // 🔥 IMPORTANT: Target the email conflict
+//       .select();
+
+//     if (error) {
+//       console.error("❌ Sync Error:", error.message);
+//     } else {
+//       console.log("✅ User Updated with new Clerk ID:", data);
+//     }
+//   } catch (err) {
+//     console.error(err);
+//   }
+// };
+
+// useEffect(() => {
+//   // Only trigger when Clerk is fully loaded and user is present
+//   if (isLoaded && isSignedIn && user) {
+//     syncUser();
+//   }
+// }, [isLoaded, isSignedIn, user?.id]);
 
   if (!isLoaded) return (
      <motion.div
@@ -73,6 +233,8 @@ const AppLayout = () => {
   if (isSignedIn && location.pathname === '/') {
     return <Navigate to="/community" replace />;
   }
+
+
 
   return (
     <div className="antialiased">

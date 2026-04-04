@@ -49,30 +49,35 @@ const EditUserForm = ({ userInfo, setIsEditUser }) => {
 
   // ---------------- Submit ----------------
   const onSubmit = async (values) => {
-    setLoading(true);
-    try {
-       const { error } = await supabase.from('users').update({
-        github: values.github,
-        linkedin: values.linkedin,
-        leetcode: values.leetcode,
-        about: values.about,
-
-    }).eq('clerk_id',userInfo?.clerk_id);
+  setLoading(true);
+  try {
+    const { error } = await supabase
+      .from('users')
+      .update({
+        github: values.github || null,
+        linkedin: values.linkedin || null,
+        leetcode: values.leetcode || null,
+        about: values.about || null,
+      })
+      .eq('clerk_id', user.id)  // ✅ target the right row using Clerk's user ID
+      .select();
 
     if (error) {
-      console.log("Edit user error: " + error.message)
-      return
+      console.error("Edit user error:", error.message);
+      toast.error("Failed to update profile");
+      return;
     }
 
-    toast.success('Profile updated successfully')
+    toast.success('Profile updated successfully');
     closeEdit();
     setIsEditUser(false);
-    } catch (error) {
-      console.log(error);
-    }finally{
-      setLoading(false);
-    }
+  } catch (err) {
+    console.error(err);
+    toast.error("Something went wrong");
+  } finally {
+    setLoading(false);
   }
+};
 
   return (
     <div className=" flex items-center justify-center p-2 sm:p-6">
