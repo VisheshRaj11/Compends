@@ -59,7 +59,7 @@ serve(async (req) => {
     const payload = JSON.parse(atob(token.split(".")[1]));
     const userId = payload.sub;
 
-    const { username } = await req.json();
+    const { username, community_id } = await req.json();
     if (!username) {
       return new Response(JSON.stringify({ error: "GitHub username required" }), {
         status: 400,
@@ -111,6 +111,7 @@ serve(async (req) => {
     const stats = {
       user_id: userId,
       github_username: username,
+      // community_id: community_id,
       public_repos: repos.length,
       followers: user.followers?.totalCount || 0,
       following: user.following?.totalCount || 0,
@@ -129,7 +130,7 @@ serve(async (req) => {
 
     if (error) {
       console.error(error);
-      return new Response(JSON.stringify({ error: "Failed to save stats" }), {
+      return new Response(JSON.stringify({ error: `Failed to save stats ${error.message}` }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });

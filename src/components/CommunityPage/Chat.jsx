@@ -48,11 +48,12 @@ const Chat = () => {
 
   try {
     const file = fileRef.current?.files?.[0];
+    console.log(file);
     let fileData = null;
 
    if (file) {
       try {
-        fileData = await uploadFile(file, communityId, supabase);
+        fileData = await uploadFile(file, supabase);
       } catch (error) {
         alert("File upload failed. Try again.", error.message);
         return;

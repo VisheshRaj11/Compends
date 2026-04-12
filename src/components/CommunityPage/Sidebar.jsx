@@ -16,6 +16,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from "zod";
 import { Input } from '../ui/input';
 import { Textarea } from '../ui/textarea';
+// import { userInfo } from 'node:os';
 
 const Sidebar = () => {
   const { user } = useUser();
@@ -29,6 +30,7 @@ const Sidebar = () => {
   const [openMenu, setOpenMenu] = useState(false);
   const [activeId, setActiveId] = useState(null);
   const [isEditCommunity, setIsEditCommunity] = useState(false);
+  const [userInfo, setUserInfo] = useState(null);
   // const [profileMenuOpen, setProfileMenuOpen] = useState(false);
 
   const formSchema = z.object({
@@ -53,6 +55,45 @@ const Sidebar = () => {
     }
     fetchCommunities()
   }, [supabase]);
+
+  // useEffect(() => {
+  //   const fetchUserInfo = async() => {
+  //     const {data, error} = await supabase.from('users').select('*').eq('clerk_id', user?.id)
+
+  //     if(error) 
+  //   }
+  // },[user?.id])
+
+  useEffect(() => {
+  if(userInfo?.id) return ;
+  const fetchCommunities = async () => {
+    const user = await supabase.auth.getUser();
+
+    const { data, error } = await supabase
+      .from('community_members')
+      .select(`
+        id,
+        community_id,
+        communities (
+          id,
+          name,
+          about,
+          size,
+          owner_id,
+          created_at
+        )
+      `)
+      .eq('user_id', userInfo?.id);
+
+    if (error) {
+      console.error(error);
+    } else {
+      console.log(data);
+    }
+  };
+
+  fetchCommunities();
+}, []);
 
   useEffect(() => {
     if(currentCommunityInfo?.name) {

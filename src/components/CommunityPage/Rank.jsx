@@ -9,12 +9,13 @@ import {
   Github, 
   Code2, 
   Terminal, 
-  ExternalLink
+  ExternalLink,
+  Loader2 // Added Loader icon
 } from "lucide-react";
 import { useSupabase } from "@/supabase/client";
 import { useUser, useAuth } from "@clerk/clerk-react";
 import { extractUsername } from "@/utils/ExtractUsername";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 
 // ---------- Podium Component ----------
 const Podium = ({ users }) => {
@@ -59,9 +60,7 @@ const Podium = ({ users }) => {
 
 // ---------- List Row Component ----------
 const LeaderboardRow = ({clerkId, user, isCurrentUser }) => {
-  console.log(clerkId)
   const navigate = useNavigate();
-  // console.log(user)
   return (
     <div className={`
     group flex items-center gap-4 p-4 mb-3 rounded-2xl border transition-all
@@ -93,7 +92,6 @@ const LeaderboardRow = ({clerkId, user, isCurrentUser }) => {
       className="hidden sm:block"
      >
        <ExternalLink 
-      
       className="h-4 w-4 text-slate-500 hidden sm:block " />
      </a>
     </div>
@@ -111,9 +109,8 @@ const Rank = () => {
   const [error, setError] = useState(null);
   const [leetCodeUsers, setLeetCodeUsers] = useState([]);
   const [githubUsers, setGithubUsers] = useState([]);
-  console.log(user);
+  const {id: communityId} = useParams();
 
-  // const 
   useEffect(() => {
       if (!user?.id) return;
     const fetchCurrentUser = async() => {
@@ -121,16 +118,14 @@ const Rank = () => {
        if(error) {
         console.log("Falied to fetch the user data");
        }
-      //  console.log(data[0]);
        setUserData(data[0])
     }
 
     fetchCurrentUser();
   },[supabase,user?.id]);
   
-  //This is for user leetcode stats and upsert in db>
   useEffect(() => {
-    if (!userData?.leetcode) return;
+    if (!userData?.leetcode || !communityId) return;
 
     const myLeetcodeStats = async() => {
       setLoading(true);
@@ -145,13 +140,10 @@ const Rank = () => {
       
       try {
         const token = await getToken({ template: "supabase" });
-        // console.log(token?.split(".").length);
-        // console.log(leetcodeUserName);
-
          const { data:leet, error } = await supabase.functions.invoke(
           'fetch-leetcode_stats',
           {
-            body: { username: leetcodeUserName },
+            body: { username: leetcodeUserName, community_id: communityId },
             headers: {
               Authorization: `Bearer ${token}`,
             },
@@ -162,59 +154,61 @@ const Rank = () => {
           console.error("Edge function error:", error);
           setError(error.message);
         } else {
-          // console.log("LeetCode stats:", leet);
           setLeetcodeStats(leet.data);
-          // Optionally update your local state or global store with the stats
+          await fetchLeetUsers();
         }
       } catch (error) {
          console.error("Unexpected error:", error);
-        setError("Failed to fetch LeetCode stats.");
+         setError("Failed to fetch LeetCode stats.");
       } finally {
-         setLoading(false);
+          setLoading(false);
       }
     }
     myLeetcodeStats();
   },[supabase,getToken, userData]);
 
-  
-  //Leetcode fetching;
+  const fetchLeetUsers = async () => {
+  const { data, error } = await supabase
+    .from('leetcode_stats')
+    .select(`user_id,
+      total_solved,
+      easy_solved,
+      medium_solved,
+      hard_solved,
+      streak,
+      users !inner (
+        clerk_id,
+        name,
+        avatar_url,
+        leetcode
+      )`)
+    .eq('community_id', communityId)
+    .order('total_solved', { ascending: false });
+
+  if (error) {
+    console.log("Failed to fetch leetcode users: ", error.message);
+    return;
+  }
+
+  const formattedUsers = data.map((stat, index) => ({
+    id: stat.user_id,
+    clerkId: stat.users.clerk_id,
+    name: stat.users.name,
+    avatar: stat.users.avatar_url || 'https://i.pravatar.cc/150?img=default',
+    solved: stat.total_solved,
+    leetcode: stat.users.leetcode,
+    rank: index + 1,
+    isCurrentUser: stat.user_id === user?.id,
+  }));
+
+  setLeetCodeUsers(formattedUsers);
+};
+
   useEffect(() => {
-    const fetchLeetUsers = async() => {
-      const {data, error} = await supabase.from('leetcode_stats').select(`user_id,
-        total_solved,
-        easy_solved,
-        medium_solved,
-        hard_solved,
-        streak,
-        users !inner (
-          clerk_id,
-          name,
-          avatar_url,
-          leetcode
-        )`).order('total_solved', {ascending:false});
-      if(error) {
-        console.log("Failed to fetch leetcode users: ", error.message);
-        return ;
-      }
-      // console.log(data[0].users.clerk_id);
+  if (!communityId) return;
+  fetchLeetUsers();
+}, [supabase, communityId, user?.id]);
 
-      const formattedUsers = data.map((stat, index) => ({
-        id: stat.user_id,
-        clerkId: stat.users.clerk_id, // ✅ IMPORTANT
-        name: stat.users.name,
-        avatar: stat.users.avatar_url || 'https://i.pravatar.cc/150?img=default',
-        solved: stat.total_solved,
-        leetcode: stat.users.leetcode,
-        rank: index + 1,
-        isCurrentUser: stat.user_id === user?.id,
-      }))
-      setLeetCodeUsers(formattedUsers);
-      // console.log(formattedUsers);
-    }
-    fetchLeetUsers();
-  },[supabase, user?.id]);
-
-  //This is for user github stats and upsert in db>
   useEffect(() => {
       if (!userData?.github) return;
 
@@ -234,7 +228,7 @@ const Rank = () => {
           const token = await getToken();
 
           const {data, error} = await supabase.functions.invoke('fetch-github_stats',{
-            body:{username: githubUsername},
+            body:{username: githubUsername, community_id: communityId},
             headers:{Authorization: `Bearer ${token}`}
           })
 
@@ -244,12 +238,10 @@ const Rank = () => {
             return;
           }
 
-          console.log("GitHub stats:", data);
-
-          fetchAllGitHubStats ();
+          await fetchAllGitHubStats ();
 
         } catch (error) {
-          console.error("Unexpected error:", err);
+          console.error("Unexpected error:", error);
           setError("Failed to fetch GitHub stats.");
         } finally {
           setLoading(false);
@@ -257,6 +249,7 @@ const Rank = () => {
       }
       fetchGithubStats();
   },[supabase, getToken, userData]);
+
 
 const fetchAllGitHubStats  = async() => {
     const {data, error} = await supabase.from('github_stats')
@@ -268,7 +261,7 @@ const fetchAllGitHubStats  = async() => {
             total_stars,
             contributions,
             users!inner(name, avatar_url, github, clerk_id)  
-          `).order('contributions', {ascending:false})
+          `).eq('community_id', communityId).order('contributions', {ascending:false})
 
       if(error) {
             console.log("Failed to fetch github users: ", error.message);
@@ -286,7 +279,6 @@ const fetchAllGitHubStats  = async() => {
           isCurrentUser: item.user_id === user?.id,
       }))
        setGithubUsers(formattedUsers);
-       console.log(formattedUsers);
 }
 
   useEffect(() => {
@@ -297,7 +289,6 @@ const fetchAllGitHubStats  = async() => {
   return (
     <div className="min-h-screen w-full bg-gradient-to-br from-white to-slate-100 bg-[radial-gradient(#8752de_1px,transparent_1px)] [background-size:26px_26px] text-slate-900 py-6 md:py-12 px-4 md:px-10 lg:px-20">
       <div className="w-full max-w-[1400px] mx-auto">
-        {/* Header Section */}
         <header className="flex flex-col md:flex-row md:items-center justify-between mb-10 gap-6">
           <div className="space-y-1">
             <h1 className="text-4xl md:text-5xl font-black tracking-tighter text-slate-900 flex items-center gap-2">
@@ -323,13 +314,18 @@ const fetchAllGitHubStats  = async() => {
             </TabsTrigger>
           </TabsList>
 
-          {['leetcode', 'geeksforgeeks', 'github'].map((platform) => {
+          {['leetcode', 'github'].map((platform) => {
             const users = platform === 'leetcode' ? leetCodeUsers: githubUsers;
             return (
               <TabsContent key={platform} value={platform} className="outline-none">
-                {users?.length > 0 ? (
+                {/* --- LOADING SPINNER LOGIC --- */}
+                {loading ? (
+                  <div className="w-full py-32 flex flex-col items-center justify-center bg-white/50 rounded-[3rem] border border-slate-200 backdrop-blur-sm">
+                    <Loader2 className="h-12 w-12 text-blue-600 animate-spin mb-4" />
+                    <p className="text-slate-500 font-bold uppercase tracking-widest text-sm">Fetching Rankings...</p>
+                  </div>
+                ) : users?.length > 0 ? (
                   <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
-                    {/* Left/Top Section: Podium (Span 5) */}
                     <div className="lg:col-span-5 xl:col-span-4 lg:sticky lg:top-12 h-fit">
                       <div className="bg-white/40 border border-white p-8 rounded-[3rem] backdrop-blur-md shadow-sm">
                         <div className="text-center mb-6">
@@ -343,7 +339,6 @@ const fetchAllGitHubStats  = async() => {
                       </div>
                     </div>
 
-                    {/* Right Section: The Rest of the List (Span 7) */}
                     <div className="lg:col-span-7 xl:col-span-8">
                       <div className="flex items-center justify-between mb-6 px-4">
                         <h3 className="text-lg font-bold text-slate-800">All Rankings</h3>
@@ -351,7 +346,7 @@ const fetchAllGitHubStats  = async() => {
                       </div>
                       <div className="grid grid-cols-1 lg:grid-cols-1 xl:grid-cols-2 gap-x-6">
                         {users.map((user) => (
-                          <LeaderboardRow  clerkId={user?.clerkId} user={user} isCurrentUser={user.isCurrentUser} />
+                          <LeaderboardRow key={user.id} clerkId={user?.clerkId} user={user} isCurrentUser={user.isCurrentUser} />
                         ))}
                       </div>
                     </div>

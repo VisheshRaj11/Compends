@@ -52,6 +52,7 @@
 // };
 
 export const uploadFile = async (file, supabase) => {
+  console.log(file);
   const ext = file.name.split('.').pop().toLowerCase();
   const fileName = `${crypto.randomUUID()}.${ext}`;
 

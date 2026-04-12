@@ -52,40 +52,30 @@ const CommunityForm = () => {
   const onSubmit = async (values) => {
     try {
       const {error, data} = await supabase.from("communities").insert({
-        name:values.communityName.trim(),
+        name: values.communityName.trim(),
         about: values.about.trim(),
         size: values.size,
         owner_id: user.id
-    }).select();
+    }).select().single();
 
     if(error) {
       console.log("Supabse Error: "+error.message);
       return;
     }
+
     console.log(data);
+
     toast.success("Community created successfully");
 
     setTimeout(() => {
       navigate(0);
       navigate(`/community/chat/${communities[0]?.id}`);
     },3 * 1000);
-    // alert("Community created!")
-    // setInsertData(data);
-    // console.log("Form Values:", values)
+   
     } catch (error) {
       console.log(error);
     }
   }
-
-  // useEffect(() => {
-  //   const channel = supabase.channel(`community_id:${Date.now()}`)
-  //   .on('postgres_changes',{
-  //     event:'*',
-  //     schema: 'public',
-  //     table:'communities',
-  //     filter:``
-  //   })
-  // })
 
   return (
     <div className="flex items-center bg-[url('/comBg.jpg')] justify-center h-screen p-4 w-full">

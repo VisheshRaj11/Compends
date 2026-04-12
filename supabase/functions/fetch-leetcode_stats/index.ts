@@ -60,7 +60,7 @@ serve(async (req) => {
     const payload = JSON.parse(atob(token.split(".")[1]));
     const userId = payload.sub; // Clerk userId (trusted)
 
-    const { username } = await req.json();
+    const { username, community_id } = await req.json();
     if (!username) {
       return new Response(JSON.stringify({ error: "Username is required" }), {
         status: 400,
@@ -105,6 +105,7 @@ serve(async (req) => {
     const stats = {
       user_id: userId,
       leetcode_username: username,
+      community_id: community_id,
       total_solved: submissions.find((s: any) => s.difficulty === "All")?.count || 0,
       easy_solved: submissions.find((s: any) => s.difficulty === "Easy")?.count || 0,
       medium_solved: submissions.find((s: any) => s.difficulty === "Medium")?.count || 0,

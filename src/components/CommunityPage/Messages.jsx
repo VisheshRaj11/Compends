@@ -215,21 +215,13 @@ const confirmDelete = (onConfirm) => {
                   
                   {/* EXTERNAL ACTION BUTTONS */}
                   <div className={`flex flex-col gap-1 transition-opacity duration-200 ${isEditing ? "opacity-0" : "opacity-0 group-hover:opacity-100"}`}>
-                    {hasFile && (
-                      <button 
-                        onClick={() => forceDownload(msg.file_url, msg.file_name)}
-                        className="p-1.5 bg-white border border-slate-200 shadow-sm rounded-full text-indigo-600 hover:bg-indigo-50 transition-colors"
-                        title="Download file"
-                      >
-                        <DownloadIcon size={14} />
-                      </button>
-                    )}
+                    
                     {isMe && (
                       <>
-                        {msg.type !== 'file' && <button onClick={() => startEdit(msg)} className="p-1.5 bg-white border border-slate-200 shadow-sm rounded-full text-slate-500 hover:bg-slate-50 transition-colors">
+                        {msg.type !== 'file' && <button onClick={() => startEdit(msg)} className="p-1.5 bg-white border border-slate-200 shadow-sm rounded-full text-slate-500 hover:bg-slate-50 transition-colors cursor-pointer">
                           <Edit size={14} />
                         </button>}
-                        <button onClick={() => deleteMessage(msg)} className="p-1.5 bg-white border border-slate-200 shadow-sm rounded-full text-red-500 hover:bg-red-50 transition-colors">
+                        <button onClick={() => deleteMessage(msg)} className="p-1.5 bg-white border border-slate-200 shadow-sm rounded-full text-red-500 hover:bg-red-50 transition-colors cursor-pointer">
                           <Trash size={14} />
                         </button>
                       </>

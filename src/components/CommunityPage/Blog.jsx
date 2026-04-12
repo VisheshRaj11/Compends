@@ -42,7 +42,7 @@ const Blog = () => {
   const [currentBlogInfo, setCurrentBlogInfo] = useState(null);
   
   const form = useForm({
-    resolver: zodResolver(editFormSchema),
+    resolver: zodResolver(formSchema),
     defaultValues: {
       title: "",
       description: "",
