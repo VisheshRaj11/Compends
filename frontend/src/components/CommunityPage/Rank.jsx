@@ -227,7 +227,7 @@ const Rank = () => {
         try {
           const token = await getToken();
 
-          const {data, error} = await supabase.functions.invoke('fetch-github_stats',{
+          const {error} = await supabase.functions.invoke('fetch-github_stats',{
             body:{username: githubUsername, community_id: communityId},
             headers:{Authorization: `Bearer ${token}`}
           })

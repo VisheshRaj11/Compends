@@ -18,7 +18,8 @@
     "@radix-ui/react-scroll-area": "^1.2.10",
     "@radix-ui/react-slot": "^1.2.4",
     "@reduxjs/toolkit": "^2.11.2",
-    "@supabase/supabase-js": "^2.91.0",
+    "@supabase/realtime-js": "^2.104.1",
+    "@supabase/supabase-js": "^2.104.1",
     "@tailwindcss/vite": "^4.1.18",
     "@vitejs/plugin-basic-ssl": "^2.1.4",
     "axios": "^1.13.4",
@@ -43,6 +44,7 @@
     "tailwind-merge": "^3.4.0",
     "tailwindcss": "^4.1.18",
     "tldraw": "^4.3.1",
+    "wrangler": "^4.83.0",
     "zod": "^4.3.5"
   },
   "devDependencies": {
