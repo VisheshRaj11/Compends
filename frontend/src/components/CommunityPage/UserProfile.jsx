@@ -251,7 +251,7 @@ const UserProfile = () => {
     { icon: Linkedin, href: userInfo?.linkedin, label: "LinkedIn" },
     { icon: Github, href: userInfo?.github, label: "GitHub" },
     { icon: LaptopMinimalCheck, href: userInfo?.leetcode, label: "LeetCode" },
-    { icon: Mail, href: '', label: `Email ${user?.emailAddresses}` },
+    { icon: Mail, href: '', label: `Email ${userInfo?.email}` },
   ];
 
   // Helper to get initials
