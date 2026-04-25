@@ -410,7 +410,9 @@ const Blog = () => {
           className={`overflow-hidden transition-all duration-300 ease-in-out
           ${activeMenuId === blog.id ? "max-h-20 mt-2" : "max-h-0"}`}
         >
-          <div
+          {
+            (blog.author_id === user?.id ) &&
+            (<div
             className={`flex justify-center gap-2 transition-all duration-300
             ${
               activeMenuId === blog.id
@@ -429,7 +431,8 @@ const Blog = () => {
             className="w-1/2 cursor-pointer">
               <Edit size={18} />
             </Button>
-          </div>
+          </div>)
+          }
 
           {isEditOpen && (
             //  <div className="flex-1 space-y-5 overflow-y-auto pr-2">
