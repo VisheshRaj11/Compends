@@ -1,6 +1,3 @@
-import { Button } from '@/components/ui/button'
-import { SignIn, UserButton } from '@clerk/clerk-react'
-import { PlusCircle } from 'lucide-react'
 import React from 'react'
 import { useSelector } from 'react-redux'
 import {Outlet, useLocation } from 'react-router-dom'

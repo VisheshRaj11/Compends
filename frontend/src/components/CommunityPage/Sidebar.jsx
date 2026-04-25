@@ -19,7 +19,7 @@ import { Textarea } from '../ui/textarea';
 // import { userInfo } from 'node:os';
 
 const Sidebar = () => {
-  const { user } = useUser();
+  const { user, isLoaded } = useUser();
   const navigate = useNavigate();
   const location = useLocation();
   const [communities, setCommunities] = useState([]);
@@ -30,7 +30,7 @@ const Sidebar = () => {
   const [openMenu, setOpenMenu] = useState(false);
   const [activeId, setActiveId] = useState(null);
   const [isEditCommunity, setIsEditCommunity] = useState(false);
-  const [userInfo, setUserInfo] = useState(null);
+  const [userInfo, setUserInfo] = useState({});
   // const [profileMenuOpen, setProfileMenuOpen] = useState(false);
 
   const formSchema = z.object({
@@ -46,54 +46,114 @@ const Sidebar = () => {
     }
   })
   
-  useEffect(() => {
-    const fetchCommunities = async () => {
-      const { error, data } = await supabase.from("communities").select('*');
-      if (error) return;
-      // console.log(data);
-      setCommunities(data);
-    }
-    fetchCommunities()
-  }, [supabase]);
-
   // useEffect(() => {
-  //   const fetchUserInfo = async() => {
-  //     const {data, error} = await supabase.from('users').select('*').eq('clerk_id', user?.id)
-
-  //     if(error) 
+  //   const fetchCommunities = async () => {
+  //     const { error, data } = await supabase.from("communities").select('*');
+  //     if (error) return;
+  //     // console.log(data);
+  //     setCommunities(data);
   //   }
-  // },[user?.id])
+  //   fetchCommunities()
+  // }, [supabase]);
 
   useEffect(() => {
-  if(userInfo?.id) return ;
+  if (!isLoaded || !user?.id) return; // 🔥 wait for Clerk
+
   const fetchCommunities = async () => {
-    const user = await supabase.auth.getUser();
+    const { data: userData, error: userError } = await supabase
+      .from('users')
+      .select('*')
+      .eq('clerk_id', user.id)
+      // .single(); // ✅ better than array
+
+    if (userError || !userData) {
+      console.error(userError);
+      return;
+    }
+
+    console.log("USER ID:", userData[0].id); // ✅ will work now
 
     const { data, error } = await supabase
       .from('community_members')
-      .select(`
-        id,
-        community_id,
-        communities (
-          id,
-          name,
-          about,
-          size,
-          owner_id,
-          created_at
-        )
-      `)
-      .eq('user_id', userInfo?.id);
+      .select(`community_id, communities(*)`)
+      .eq('user_id', userData[0].id);
 
     if (error) {
       console.error(error);
-    } else {
-      console.log(data);
+      return;
     }
+
+    setCommunities(data.map(item => item.communities));
   };
 
   fetchCommunities();
-}, []);
+}, [isLoaded, user?.id]);
+
+  // useEffect(() => {
+  //   const fetchCommunities = async() => {
+  //     await fetchUserInfo();
+  //     const userId = userInfo[0]?.id;
+  //     console.log(userId);
+  //     const {error, data} = await supabase.from('community_members')
+  //     .select(`community_id, communities(*)`).eq('user_id', userId);
+
+  //     if (error) {
+  //       console.error(error);
+  //       return;
+  //     }
+
+  //     console.log(data);
+  //     // 🔥 Extract only communities
+  //     // const filteredCommunities = data.map(item => item.communities);
+
+  //     setCommunities(data);
+  //    };
+     
+  //    fetchCommunities();
+  // },[supabase]);
+
+  // // useEffect(() => {
+  //   const fetchUserInfo = async() => {
+
+  //     const {data, error} = await supabase.from('users').select('*').eq('clerk_id', user?.id);
+  //     console.log(data);
+  //     if(error) return;
+  //     setUserInfo(data?.[0]);
+  //   }
+    // fetchUserInfo();
+    // fetchCommunities();
+  // },[user])
+
+//   useEffect(() => {
+//   if(userInfo?.id) return ;
+//   const fetchCommunities = async () => {
+//     const user = await supabase.auth.getUser();
+
+//     const { data, error } = await supabase
+//       .from('community_members')
+//       .select(`
+//         id,
+//         community_id,
+//         communities (
+//           id,
+//           name,
+//           about,
+//           size,
+//           owner_id,
+//           created_at
+//         )
+//       `)
+//       .eq('user_id', userInfo?.id);
+
+//     if (error) {
+//       console.error(error);
+//     } else {
+//       console.log(data);
+//     }
+//   };
+
+//   fetchCommunities();
+// }, []);
 
   useEffect(() => {
     if(currentCommunityInfo?.name) {

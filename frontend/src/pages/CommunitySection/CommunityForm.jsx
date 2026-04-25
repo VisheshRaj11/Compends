@@ -15,6 +15,7 @@ import { useSupabase} from '../../supabase/client'
 import { useUser } from '@clerk/clerk-react'
 import { toast } from 'react-toastify'
 import { useNavigate } from 'react-router-dom'
+// import { userInfo } from 'node:os'
 
 const formSchema = z.object({
   communityName: z.string().min(3, "Community name must be at least 3 characters"),
@@ -47,25 +48,65 @@ const CommunityForm = () => {
       }
       fetchCommunities()
     }, [supabase]);
+
+  const addOwner = async(communityId) => {
+    console.log(communityId);
+    const { data: userData, error: userError } = await supabase
+      .from('users')
+      .select('*')
+      .eq('clerk_id', user.id)
+      // .single(); // ✅ better than array
+
+    if (userError || !userData) {
+      console.error(userError);
+      return;
+    }
+
+    console.log("USER ID:", userData[0].id);
+
+    const {error} = await supabase.from('community_members').insert({
+      user_id: userData[0].id,
+      community_id: communityId,
+      role: "admin"
+    });
+
+    if(error) return;
+  }
   
 
   const onSubmit = async (values) => {
     try {
-      const {error, data} = await supabase.from("communities").insert({
+      const {error: insertError} = await supabase.from("communities").insert({
         name: values.communityName.trim(),
         about: values.about.trim(),
         size: values.size,
         owner_id: user.id
-    }).select().single();
+    });
 
-    if(error) {
-      console.log("Supabse Error: "+error.message);
-      return;
-    }
+   if (insertError) throw insertError;
 
-    console.log(data);
+// Then fetch separately
+  const { data, error } = await supabase
+    .from("communities")
+    .select('*')
+    .eq('owner_id', user.id)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .single();
+
+   console.log("Created community:", data);
+
+    // console.log(data);
 
     toast.success("Community created successfully");
+
+    const community = data[0]; 
+
+    await addOwner(community.id);
+
+    // await addOwner(data);
+
+    // navigate(`/community/chat/${data.id}`);
 
     setTimeout(() => {
       navigate(0);
