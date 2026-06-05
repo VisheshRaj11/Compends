@@ -46,34 +46,89 @@ export default function ProjectCanvas() {
   const saveQueueRef = useRef(Promise.resolve());
 
   // Save drawing (update → insert fallback)
+  // const saveDrawingToSupabase = async (elements) => {
+  //   if (!elements || !projectId) return;
+
+  //   saveQueueRef.current = saveQueueRef.current.then(async () => {
+  //     setIsSaving(true);
+
+  //     const { error: updateError, count } = await supabase
+  //       .from('drawings')
+  //       .update({ elements })
+  //       .eq('project_id', projectId);
+
+  //     if (updateError || count === 0) {
+  //       const { error: insertError } = await supabase
+  //         .from('drawings')
+  //         .insert({ project_id: projectId, elements });
+
+  //       if (insertError) {
+  //         console.error('Insert failed:', insertError.message);
+  //       } else {
+  //         console.log('Inserted');
+  //       }
+  //     } else {
+  //       console.log('Updated');
+  //     }
+
+  //     setIsSaving(false);
+  //   });
+  // };
+
   const saveDrawingToSupabase = async (elements) => {
-    if (!elements || !projectId) return;
+if (!elements || !projectId) return;
 
-    saveQueueRef.current = saveQueueRef.current.then(async () => {
-      setIsSaving(true);
+saveQueueRef.current = saveQueueRef.current.then(async () => {
+try {
+setIsSaving(true);
+  const { data: existingRow, error: fetchError } = await supabase
+    .from('drawings')
+    .select('id')
+    .eq('project_id', projectId)
+    .maybeSingle();
 
-      const { error: updateError, count } = await supabase
-        .from('drawings')
-        .update({ elements })
-        .eq('project_id', projectId);
+  if (fetchError) {
+    console.error('Fetch error:', fetchError);
+    return;
+  }
 
-      if (updateError || count === 0) {
-        const { error: insertError } = await supabase
-          .from('drawings')
-          .insert({ project_id: projectId, elements });
+  if (existingRow) {
+    const { error: updateError } = await supabase
+      .from('drawings')
+      .update({
+        elements,
+      })
+      .eq('project_id', projectId);
 
-        if (insertError) {
-          console.error('Insert failed:', insertError.message);
-        } else {
-          console.log('Inserted');
-        }
-      } else {
-        console.log('Updated');
-      }
+    if (updateError) {
+      console.error('Update failed:', updateError);
+      return;
+    }
 
-      setIsSaving(false);
-    });
-  };
+    console.log('Drawing Updated');
+  } else {
+    const { error: insertError } = await supabase
+      .from('drawings')
+      .insert({
+        project_id: projectId,
+        elements,
+      });
+
+    if (insertError) {
+      console.error('Insert failed:', insertError);
+      return;
+    }
+
+    console.log('Drawing Inserted');
+  }
+} catch (err) {
+  console.error(err);
+} finally {
+  setIsSaving(false);
+}
+});
+};
+
 
   // Debounced save function
   const saveDebouncedRef = useRef(
@@ -105,49 +160,123 @@ export default function ProjectCanvas() {
   };
 
   
-  const saveTasksDb = async () => {
-  // Merge existing tasks with newly assigned ones
-  const existingTasks = fetchTasks || [];
-  const allTasks = [...existingTasks];
+//   const saveTasksDb = async () => {
+//   // Merge existing tasks with newly assigned ones
+//   const existingTasks = fetchTasks || [];
+//   const allTasks = [...existingTasks];
 
-  saveTasks.forEach((newTask) => {
-    const index = allTasks.findIndex((t) => t.member_id === newTask.member_id);
-    if (index === -1) {
-      allTasks.push(newTask); // add if not exists
-    } else {
-      // Optionally update existing task (or skip if you want to keep first assignment)
-      allTasks[index] = newTask;
-    }
-  });
+//   saveTasks.forEach((newTask) => {
+//     const index = allTasks.findIndex((t) => t.member_id === newTask.member_id);
+//     if (index === -1) {
+//       allTasks.push(newTask); // add if not exists
+//     } else {
+//       // Optionally update existing task (or skip if you want to keep first assignment)
+//       allTasks[index] = newTask;
+//     }
+//   });
 
-  // Upsert
-  const { error: updateError, count } = await supabase
-    .from('drawings')
-    .update({ tasks: allTasks })
-    .eq('project_id', projectId);
+//   // Upsert
+//   const { error: updateError, count } = await supabase
+//     .from('drawings')
+//     .update({ tasks: allTasks })
+//     .eq('project_id', projectId);
 
-  if (updateError) {
-    console.error('Update failed:', updateError.message);
-    alert('Failed to save tasks');
-    return;
-  }
+//   if (updateError) {
+//     console.error('Update failed:', updateError.message);
+//     alert('Failed to save tasks');
+//     return;
+//   }
 
-  if (count === 0) {
-    const { error: insertError } = await supabase
-      .from('drawings')
-      .insert({ project_id: projectId, tasks: allTasks });
+//   if (count === 0) {
+//     const { error: insertError } = await supabase
+//       .from('drawings')
+//       .insert({ project_id: projectId, tasks: allTasks });
 
-    if (insertError) {
-      console.error('Insert failed:', insertError.message);
-      alert('Failed to save tasks');
+//     if (insertError) {
+//       console.error('Insert failed:', insertError.message);
+//       alert('Failed to save tasks');
+//       return;
+//     }
+//   }
+
+//   alert('Task added successfully');
+//   await fetchTasksDb(); // refresh UI
+//   setSaveTasks([]); // clear pending tasks
+//   setAssignTask(false);
+// };
+
+const saveTasksDb = async () => {
+  try {
+    const existingTasks = fetchTasks || [];
+
+    const allTasks = [...existingTasks];
+
+    saveTasks.forEach((newTask) => {
+      const index = allTasks.findIndex(
+        (t) => t.member_id === newTask.member_id
+      );
+
+      if (index === -1) {
+        allTasks.push(newTask);
+      } else {
+        allTasks[index] = newTask;
+      }
+    });
+
+    console.log("Project ID:", projectId);
+    console.log("Tasks to save:", allTasks);
+
+    // Check if drawing row exists
+    const { data: existingRow, error: fetchError } = await supabase
+      .from("drawings")
+      .select("id")
+      .eq("project_id", projectId)
+      .maybeSingle();
+
+    if (fetchError) {
+      console.error(fetchError);
+      alert("Failed to check existing drawing");
       return;
     }
-  }
 
-  alert('Task added successfully');
-  await fetchTasksDb(); // refresh UI
-  setSaveTasks([]); // clear pending tasks
-  setAssignTask(false);
+    if (existingRow) {
+      const { error: updateError } = await supabase
+        .from("drawings")
+        .update({
+          tasks: allTasks,
+        })
+        .eq("project_id", projectId);
+
+      if (updateError) {
+        console.error(updateError);
+        alert("Failed to update task");
+        return;
+      }
+    } else {
+      const { error: insertError } = await supabase
+        .from("drawings")
+        .insert({
+          project_id: projectId,
+          tasks: allTasks,
+        });
+
+      if (insertError) {
+        console.error(insertError);
+        alert("Failed to create task");
+        return;
+      }
+    }
+
+    alert("Task added successfully");
+
+    await fetchTasksDb();
+
+    setSaveTasks([]);
+    setAssignTask(false);
+  } catch (err) {
+    console.error(err);
+    alert("Unexpected error");
+  }
 };
 
 
