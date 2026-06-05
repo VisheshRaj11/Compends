@@ -571,6 +571,7 @@ useEffect(() => {
           <Tldraw
             inferDarkMode={false}
             autoFocus
+            persistenceKey={`project-${projectId}`}
             onMount={(editorInstance) => setEditor(editorInstance)}
           />
         </div>
