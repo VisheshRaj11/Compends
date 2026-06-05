@@ -34,7 +34,7 @@ export default function ProjectCanvas() {
   const [newTask, setNewTask] = useState('');
   const [saveTasks, setSaveTasks] = useState([]);
   const [fetchTasks, setFetchTasks] = useState([]);
-
+  const drawingLoadedRef = useRef(false);
   const supabase = useSupabase();
   const { projectId, communityId } = useParams();
   const [communityMembers,setCommunityMembers] = useState([]);
@@ -361,30 +361,56 @@ useEffect(() => {
 
 
   // Load existing drawing from DB
+  // useEffect(() => {
+  //   if (!editor || !projectId) return;
+
+  //   const fetchDrawings = async () => {
+  //     const { error, data } = await supabase
+  //       .from('drawings')
+  //       .select('*')
+  //       .eq('project_id', projectId);
+
+  //     if (error) {
+  //       console.error('Fetch error:', error.message);
+  //       return;
+  //     }
+
+  //     if (data[0]?.elements) {
+  //       editor.run(() => {
+  //         editor.createShapes(data[0].elements);
+  //       });
+  //       setTimeout(() => recenterTextShapes(editor), 100);
+  //     }
+  //   };
+
+  //   fetchDrawings();
+  // }, [editor, projectId]);
+// -----------------------
   useEffect(() => {
-    if (!editor || !projectId) return;
+  if (!editor || !projectId) return;
 
-    const fetchDrawings = async () => {
-      const { error, data } = await supabase
-        .from('drawings')
-        .select('*')
-        .eq('project_id', projectId);
+  if (drawingLoadedRef.current) return;
 
-      if (error) {
-        console.error('Fetch error:', error.message);
-        return;
-      }
+  drawingLoadedRef.current = true;
 
-      if (data[0]?.elements) {
-        editor.run(() => {
-          editor.createShapes(data[0].elements);
-        });
-        setTimeout(() => recenterTextShapes(editor), 100);
-      }
-    };
+  const fetchDrawings = async () => {
+    const { error, data } = await supabase
+      .from('drawings')
+      .select('*')
+      .eq('project_id', projectId);
 
-    fetchDrawings();
-  }, [editor, projectId]);
+    if (error) {
+      console.error(error);
+      return;
+    }
+
+    if (data?.length > 0 && data[0]?.elements?.length > 0) {
+      editor.createShapes(data[0].elements);
+    }
+  };
+
+  fetchDrawings();
+}, [editor, projectId]);
 
   // Autosave listener
   useEffect(() => {
@@ -505,7 +531,10 @@ useEffect(() => {
           const finalShapes = [...validateShapes, ...extraTextShapes];
           editor.createShapes(finalShapes);
 
-          await saveDrawingToSupabase(finalShapes);
+          // await saveDrawingToSupabase(finalShapes);
+          const allShapes = editor.getCurrentPageShapes();
+
+        await saveDrawingToSupabase(allShapes);
 
           setTimeout(() => {
             extraTextShapes.forEach((textShape) => {
