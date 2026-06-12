@@ -183,19 +183,6 @@ This architecture ensures the API secret is never exposed in the browser, preven
 
 LeetCode does not provide an official public API. Fetching user statistics requires querying their internal GraphQL endpoint, which enforces strict CORS policies and rate limits when called from a browser directly. Routing these requests through the backend server resolved the CORS restriction, and request caching on the server side was used to stay within acceptable rate limits while serving ranking data to multiple community members simultaneously.
 
----
-
-
-
-Contributions are welcome. To contribute, please fork the repository, create a feature branch, and submit a pull request with a clear description of the changes made.
-
-```bash
-git checkout -b feature/your-feature-name
-git commit -m "Add: description of your changes"
-git push origin feature/your-feature-name
-```
-
----
 
 ## License
 
