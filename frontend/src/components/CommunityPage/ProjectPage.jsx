@@ -24,13 +24,13 @@ const debounce = (fn, delay) => {
   };
 };
 
-window.addEventListener("error", (e) => {
-  console.error("GLOBAL ERROR:", e.error);
-});
+// window.addEventListener("error", (e) => {
+//   console.error("GLOBAL ERROR:", e.error);
+// });
 
-window.addEventListener("unhandledrejection", (e) => {
-  console.error("PROMISE ERROR:", e.reason);
-});
+// window.addEventListener("unhandledrejection", (e) => {
+//   console.error("PROMISE ERROR:", e.reason);
+// });
 
 export default function ProjectCanvas() {
   const [isPanelOpen, setIsPanelOpen] = useState(true);
@@ -49,10 +49,11 @@ export default function ProjectCanvas() {
 
   // console.log(communityId);
   useEffect(() => {
-    console.log("PROJECT CANVAS MOUNTED");
+    // console.log("PROJECT CANVAS MOUNTED");
 
     return () => {
-      console.log("PROJECT CANVAS UNMOUNTED");
+      // console.log("PROJECT CANVAS UNMOUNTED");
+      
     };
   }, []);
 
@@ -237,8 +238,8 @@ const saveTasksDb = async () => {
       }
     });
 
-    console.log("Project ID:", projectId);
-    console.log("Tasks to save:", allTasks);
+    // console.log("Project ID:", projectId);
+    // console.log("Tasks to save:", allTasks);
     
     // Check if drawing row exists
     const { data: existingRow, error: fetchError } = await supabase
@@ -433,7 +434,7 @@ useEffect(() => {
 //   };
 
       const fetchDrawings = async () => {
-        console.log("FETCH DRAWINGS START");
+        // console.log("FETCH DRAWINGS START");
       const { data, error } = await supabase
         .from("drawings")
         .select("*")
@@ -443,7 +444,8 @@ useEffect(() => {
         console.error(error);
         return;
       }
-      console.log("FETCHED DATA", data);
+      // console.log("FETCHED DATA", data);
+
       if (data?.[0]?.elements?.length) {
         editor.createShapes(data[0].elements);
       }
@@ -458,32 +460,12 @@ useEffect(() => {
   useEffect(() => {
     if (!editor || !projectId) return;
 
-    // const cleanup = editor.store.listen(
-    //   (event) => {
-    //     if (event.source === 'user') {
-    //       const shapes = editor.getCurrentPageShapes();
-    //       saveDebouncedRef.current(shapes);
-    //     }
-    //   },
-    //   { scope: 'document' }
-    // );
-    setInterval(() => {
-      if (editor) {
-        console.log(
-          "SHAPES ON CANVAS:",
-          editor.getCurrentPageShapes().length
-        );
-      }
-    }, 2000);
-
     const cleanup = editor.store.listen(
       (event) => {
         console.log("STORE EVENT", event);
 
         if (event.source === "user") {
           const shapes = editor.getCurrentPageShapes();
-
-          console.log("CURRENT SHAPES", shapes.length);
 
           saveDebouncedRef.current(shapes);
         }
@@ -794,6 +776,7 @@ useEffect(() => {
           <Tldraw
             inferDarkMode={false}
             autoFocus
+            licenseKey={import.meta.env.VITE_TLDRAW_LICENSE}
             // persistenceKey={`project-${projectId}`}
             onMount={(editorInstance) => setEditor(editorInstance)}
           />
