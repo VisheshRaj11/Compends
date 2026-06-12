@@ -24,6 +24,7 @@ const debounce = (fn, delay) => {
   };
 };
 
+console.log("PROJECT CANVAS RENDER");
 export default function ProjectCanvas() {
   const [isPanelOpen, setIsPanelOpen] = useState(true);
   const [prompt, setPrompt] = useState('');
@@ -225,7 +226,7 @@ const saveTasksDb = async () => {
 
     console.log("Project ID:", projectId);
     console.log("Tasks to save:", allTasks);
-
+    
     // Check if drawing row exists
     const { data: existingRow, error: fetchError } = await supabase
       .from("drawings")
@@ -419,6 +420,7 @@ useEffect(() => {
 //   };
 
       const fetchDrawings = async () => {
+        console.log("FETCH DRAWINGS START");
       const { data, error } = await supabase
         .from("drawings")
         .select("*")
@@ -428,7 +430,7 @@ useEffect(() => {
         console.error(error);
         return;
       }
-
+      console.log("FETCHED DATA", data);
       if (data?.[0]?.elements?.length) {
         editor.createShapes(data[0].elements);
       }
@@ -443,14 +445,37 @@ useEffect(() => {
   useEffect(() => {
     if (!editor || !projectId) return;
 
+    // const cleanup = editor.store.listen(
+    //   (event) => {
+    //     if (event.source === 'user') {
+    //       const shapes = editor.getCurrentPageShapes();
+    //       saveDebouncedRef.current(shapes);
+    //     }
+    //   },
+    //   { scope: 'document' }
+    // );
+    setInterval(() => {
+      if (editor) {
+        console.log(
+          "SHAPES ON CANVAS:",
+          editor.getCurrentPageShapes().length
+        );
+      }
+    }, 2000);
+
     const cleanup = editor.store.listen(
       (event) => {
-        if (event.source === 'user') {
+        console.log("STORE EVENT", event);
+
+        if (event.source === "user") {
           const shapes = editor.getCurrentPageShapes();
+
+          console.log("CURRENT SHAPES", shapes.length);
+
           saveDebouncedRef.current(shapes);
         }
       },
-      { scope: 'document' }
+      { scope: "document" }
     );
 
     return () => cleanup();
