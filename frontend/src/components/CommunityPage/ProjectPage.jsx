@@ -391,23 +391,50 @@ useEffect(() => {
 
   if (drawingLoadedRef.current) return;
 
-  drawingLoadedRef.current = true;
+//   drawingLoadedRef.current = true;
 
-  const fetchDrawings = async () => {
-    const { error, data } = await supabase
-      .from('drawings')
-      .select('*')
-      .eq('project_id', projectId);
+//   const fetchDrawings = async () => {
+//     const { error, data } = await supabase
+//       .from('drawings')
+//       .select('*')
+//       .eq('project_id', projectId);
 
-    if (error) {
-      console.error(error);
-      return;
-    }
+//     if (error) {
+//       console.error(error);
+//       return;
+//     }
 
-    if (data?.length > 0 && data[0]?.elements?.length > 0) {
-      editor.createShapes(data[0].elements);
-    }
-  };
+//     if (data?.length > 0 && data[0]?.elements?.length > 0) {
+//       // editor.createShapes(data[0].elements);
+//       editor.run(() => {
+//       const existingShapes = editor.getCurrentPageShapes();
+
+//       if (existingShapes.length) {
+//         editor.deleteShapes(existingShapes.map(s => s.id));
+//       }
+
+//       editor.createShapes(data[0].elements);
+// });
+//     }
+//   };
+
+      const fetchDrawings = async () => {
+      const { data, error } = await supabase
+        .from("drawings")
+        .select("*")
+        .eq("project_id", projectId);
+
+      if (error) {
+        console.error(error);
+        return;
+      }
+
+      if (data?.[0]?.elements?.length) {
+        editor.createShapes(data[0].elements);
+      }
+
+      drawingLoadedRef.current = true;
+    };
 
   fetchDrawings();
 }, [editor, projectId]);
@@ -729,7 +756,7 @@ useEffect(() => {
           <Tldraw
             inferDarkMode={false}
             autoFocus
-            persistenceKey={`project-${projectId}`}
+            // persistenceKey={`project-${projectId}`}
             onMount={(editorInstance) => setEditor(editorInstance)}
           />
         </div>
@@ -837,7 +864,7 @@ useEffect(() => {
                 </Button>
                 <Button 
                 onClick={saveTasksDb}
-                disabled={communityMembers.length === 0}
+                disabled={communityMembers.length === saveTasks.length}
                 className="px-5 py-2 bg-black text-white border-2 border-black rounded-lg font-bold text-sm hover:opacity-90 transition-all shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] active:shadow-none active:translate-x-[1px] active:translate-y-[1px]">
                   Create Task
                 </Button>
