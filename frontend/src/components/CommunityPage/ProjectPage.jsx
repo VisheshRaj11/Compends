@@ -24,7 +24,14 @@ const debounce = (fn, delay) => {
   };
 };
 
-console.log("PROJECT CANVAS RENDER");
+window.addEventListener("error", (e) => {
+  console.error("GLOBAL ERROR:", e.error);
+});
+
+window.addEventListener("unhandledrejection", (e) => {
+  console.error("PROMISE ERROR:", e.reason);
+});
+
 export default function ProjectCanvas() {
   const [isPanelOpen, setIsPanelOpen] = useState(true);
   const [prompt, setPrompt] = useState('');
@@ -41,7 +48,13 @@ export default function ProjectCanvas() {
   const [communityMembers,setCommunityMembers] = useState([]);
 
   // console.log(communityId);
+  useEffect(() => {
+    console.log("PROJECT CANVAS MOUNTED");
 
+    return () => {
+      console.log("PROJECT CANVAS UNMOUNTED");
+    };
+  }, []);
 
   // Save queue
   const saveQueueRef = useRef(Promise.resolve());
