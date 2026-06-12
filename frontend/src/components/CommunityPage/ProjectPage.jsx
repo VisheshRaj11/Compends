@@ -14,6 +14,7 @@ import {
 import { useSupabase } from '@/supabase/client';
 import { useParams } from 'react-router-dom';
 import { Button } from '../ui/button';
+import { toast } from 'react-toastify';
 
 // Debounce utility
 const debounce = (fn, delay) => {
@@ -250,7 +251,8 @@ const saveTasksDb = async () => {
 
     if (fetchError) {
       console.error(fetchError);
-      alert("Failed to check existing drawing");
+      toast.error("Failed to check existing drawing")
+      // alert("Failed to check existing drawing");
       return;
     }
 
@@ -264,7 +266,8 @@ const saveTasksDb = async () => {
 
       if (updateError) {
         console.error(updateError);
-        alert("Failed to update task");
+        toast.error("Failed to update task")
+        // alert("Failed to update task");
         return;
       }
     } else {
@@ -277,12 +280,14 @@ const saveTasksDb = async () => {
 
       if (insertError) {
         console.error(insertError);
-        alert("Failed to create task");
+        toast.error("Failed to create task")
+        // alert("Failed to create task");
         return;
       }
     }
 
-    alert("Task added successfully");
+    toast.success("Task added successfully")
+    // alert("Task added successfully");
 
     await fetchTasksDb();
 
@@ -290,7 +295,7 @@ const saveTasksDb = async () => {
     setAssignTask(false);
   } catch (err) {
     console.error(err);
-    alert("Unexpected error");
+    // alert("Unexpected error");
   }
 };
 
@@ -302,14 +307,16 @@ const saveTasksDb = async () => {
   // Check if already assigned in DB
   const alreadyAssignedInDb = fetchTasks.some((task) => task.member_id === id);
   if (alreadyAssignedInDb) {
-    alert(`${user.name} already has a task assigned.`);
+    // alert();
+    toast.error(`${user.name} already has a task assigned.`)
     return;
   }
 
   // Check if already assigned in current session (unsaved)
   const alreadyAssignedLocally = saveTasks.some((item) => item.member_id === id);
   if (alreadyAssignedLocally) {
-    alert(`${user.name} already has a task assigned (not saved yet).`);
+    // alert(`${user.name} already has a task assigned (not saved yet).`);
+    toast.error(`${user.name} already has a task assigned (not saved yet).`)
     return;
   }
 
